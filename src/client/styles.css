@@ -1,46 +1,100 @@
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f7f7f8;
+  background: #0a0a0a;
+  color: #c8c8c8;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
+/* ── Terminal header bar ── */
+.terminalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #111;
+  border-bottom: 2px solid #ff6600;
+}
+
+.terminalHeader .brand {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ff6600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.terminalHeader .headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.terminalHeader .headerRight .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #33ff33;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ── Main container ── */
 .container {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 41px);
 }
 
-h1 {
-  margin-top: 0;
-}
-
+/* ── Connect section ── */
 .connectSection {
-  margin-bottom: 16px;
+  margin-top: 12px;
   padding: 12px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
+  background: #1a1a1a;
+  border: 1px solid #333;
 }
 
 .connectHint {
   margin: 0 0 8px;
-  font-size: 13px;
-  color: #555;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.connectHint strong {
+  color: #ff9900;
 }
 
 .connectHint code {
-  font-size: 12px;
-  background: #f0f0f0;
+  font-size: 11px;
+  background: #111;
+  color: #ff6600;
   padding: 1px 4px;
-  border-radius: 4px;
+  border: 1px solid #333;
 }
 
 .connectSection label {
-  margin-bottom: 8px;
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .connectRow {
@@ -50,38 +104,146 @@ h1 {
 }
 
 .connectRow button {
-  border: 0;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 14px;
+  border: none;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 12px;
   cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
 }
 
 #connectButton {
-  background: #1976d2;
-  color: #fff;
+  background: #ff6600;
+  color: #000;
+}
+
+#connectButton:hover {
+  background: #ff8533;
 }
 
 #disconnectButton {
-  background: #eceff1;
-  color: #555;
+  background: #222;
+  color: #666;
+  border: 1px solid #333;
+}
+
+#disconnectButton:hover {
+  background: #333;
+  color: #c8c8c8;
 }
 
 .connectStatus {
   display: block;
-  margin-top: 8px;
-  font-size: 13px;
-  color: #2e7d32;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #33ff33;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .connectStatus.error {
-  color: #c62828;
+  color: #ff3333;
 }
 
-label {
-  display: grid;
-  gap: 6px;
+/* ── Messages area ── */
+.messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #0a0a0a;
+  border: 1px solid #333;
+  margin-top: 12px;
+  padding: 8px 12px;
+}
+
+.messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages::-webkit-scrollbar-track {
+  background: #111;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background: #333;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ── Message entries ── */
+.message {
+  padding: 6px 0;
+  border-bottom: 1px solid #1a1a1a;
+  display: block;
+}
+
+.message:last-child {
+  border-bottom: none;
+}
+
+.message .rolePrefix {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.message.user .rolePrefix {
+  color: #ff9900;
+}
+
+.message.assistant .rolePrefix {
+  color: #33ff33;
+}
+
+.message .msgContent {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message.user .msgContent {
+  color: #ff9900;
+}
+
+.message.assistant .msgContent {
+  color: #c8c8c8;
+}
+
+.meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meta.confidence {
+  color: #ff6600;
+}
+
+.meta.warning {
+  color: #ff3333;
+}
+
+/* ── Input area (command prompt) ── */
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 8px;
+  background: #111;
+  border: 1px solid #333;
+}
+
+.promptChar {
+  padding: 10px 0 10px 12px;
+  color: #ff6600;
+  font-weight: 700;
   font-size: 14px;
+  user-select: none;
+  flex-shrink: 0;
 }
 
 input,
@@ -90,74 +252,116 @@ button {
   font: inherit;
 }
 
-input,
-textarea {
+#accessTokenInput {
   width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 10px;
+  border: 1px solid #333;
+  background: #111;
+  color: #ff9900;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  caret-color: #ff6600;
+  outline: none;
 }
 
-.messages {
-  min-height: 320px;
-  max-height: 500px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 12px;
+#accessTokenInput::placeholder {
+  color: #444;
 }
 
-.message {
-  margin-bottom: 10px;
-  display: flex;
-}
-
-.message.user {
-  justify-content: flex-end;
-}
-
-.message.assistant {
-  justify-content: flex-start;
-}
-
-.bubble {
-  max-width: 75%;
-  border-radius: 10px;
-  padding: 10px 12px;
-  white-space: pre-wrap;
-}
-
-.message.user .bubble {
-  background: #1976d2;
-  color: #fff;
-}
-
-.message.assistant .bubble {
-  background: #eceff1;
-}
-
-.meta {
-  margin-top: 6px;
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.inputRow {
-  margin-top: 14px;
-  display: flex;
-  gap: 8px;
+#accessTokenInput:focus {
+  border-color: #ff6600;
 }
 
 #messageInput {
   flex: 1;
+  border: none;
+  background: transparent;
+  color: #ff9900;
+  padding: 10px 8px;
+  font: inherit;
+  font-size: 13px;
+  caret-color: #ff6600;
+  outline: none;
+}
+
+#messageInput::placeholder {
+  color: #444;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
 }
 
 #sendButton {
-  border: 0;
-  border-radius: 8px;
-  padding: 0 16px;
-  background: #1976d2;
-  color: #fff;
+  border: none;
+  background: #ff6600;
+  color: #000;
+  padding: 10px 16px;
   cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+#sendButton:hover {
+  background: #ff8533;
+}
+
+/* ── Status bar ── */
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  background: #111;
+  border-top: 1px solid #333;
+  font-size: 10px;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 8px;
+}
+
+.statusBar .statusLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusBar .statusDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #333;
+}
+
+.statusBar .statusDot.connected {
+  background: #33ff33;
+}
+
+/* ── Scanline overlay effect ── */
+.container::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  z-index: 999;
+}
+
+/* ── Selection styling ── */
+::selection {
+  background: #ff6600;
+  color: #000;
 }

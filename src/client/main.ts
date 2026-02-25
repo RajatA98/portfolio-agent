@@ -19,6 +19,14 @@ const connectButton = document.getElementById('connectButton') as HTMLButtonElem
 const disconnectButton = document.getElementById('disconnectButton') as HTMLButtonElement;
 const connectStatusEl = document.getElementById('connectStatus') as HTMLSpanElement;
 
+// Status bar elements
+const headerDot = document.getElementById('headerDot') as HTMLSpanElement;
+const headerStatus = document.getElementById('headerStatus') as HTMLSpanElement;
+const headerClock = document.getElementById('headerClock') as HTMLSpanElement;
+const statusDot = document.getElementById('statusDot') as HTMLSpanElement;
+const statusText = document.getElementById('statusText') as HTMLSpanElement;
+const statusClock = document.getElementById('statusClock') as HTMLSpanElement;
+
 function apiUrl(path: string): string {
   return `${API_BASE}${path}`;
 }
@@ -42,10 +50,33 @@ function clearStoredJwt(): void {
 function setConnectStatus(text: string, isError = false): void {
   connectStatusEl.textContent = text;
   connectStatusEl.className = 'connectStatus' + (isError ? ' error' : '');
+  updateTerminalStatus();
 }
+
+// ── Clock & status bar ──
+function updateClock(): void {
+  const now = new Date();
+  const ts = now.toLocaleTimeString('en-US', { hour12: false });
+  const ds = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }).toUpperCase();
+  const full = `${ds} ${ts}`;
+  if (headerClock) headerClock.textContent = full;
+  if (statusClock) statusClock.textContent = full;
+}
+
+function updateTerminalStatus(): void {
+  const connected = !!getStoredJwt();
+  if (headerDot) headerDot.style.background = connected ? '#33ff33' : '#ff3333';
+  if (headerStatus) headerStatus.textContent = connected ? 'CONNECTED' : 'OFFLINE';
+  if (statusDot) statusDot.className = 'statusDot' + (connected ? ' connected' : '');
+  if (statusText) statusText.textContent = connected ? 'CONNECTED' : 'DISCONNECTED';
+}
+
+setInterval(updateClock, 1000);
+updateClock();
 
 render();
 updateConnectStatus();
+updateTerminalStatus();
 void checkServerAuth();
 
 connectButton.addEventListener('click', () => {
@@ -174,6 +205,11 @@ async function checkServerAuth(): Promise<void> {
     if (data?.authenticated) {
       // Server already has a JWT (set via .env) — no manual connect needed.
       document.getElementById('connectSection')!.style.display = 'none';
+      // Update status to show connected
+      if (headerDot) headerDot.style.background = '#33ff33';
+      if (headerStatus) headerStatus.textContent = 'CONNECTED';
+      if (statusDot) statusDot.className = 'statusDot connected';
+      if (statusText) statusText.textContent = 'CONNECTED (SERVER)';
     }
   } catch {
     // Agent not reachable yet — ignore.
@@ -267,21 +303,29 @@ function render() {
   const messages = history.getMessages();
   messagesEl.innerHTML = messages
     .map((message) => {
-      const warnings =
-        message.warnings && message.warnings.length
-          ? `<div class="meta">${message.warnings.join('<br/>')}</div>`
-          : '';
+      const isUser = message.role === 'user';
+      const prefix = isUser ? '&gt;&gt;' : '&lt;&lt;';
+
       const confidence =
         message.confidence !== undefined
-          ? `<div class="meta">Confidence: ${Math.round(
-              message.confidence * 100
-            )}%</div>`
+          ? `<div class="meta confidence">[CONFIDENCE: ${Math.round(message.confidence * 100)}%]</div>`
           : '';
+
+      const warnings =
+        message.warnings && message.warnings.length
+          ? message.warnings
+              .map((w) => `<div class="meta warning">[WARNING] ${escapeHtml(w)}</div>`)
+              .join('')
+          : '';
+
       return `<div class="message ${message.role}">
-        <div class="bubble">${escapeHtml(message.content)}${confidence}${warnings}</div>
+        <span class="rolePrefix">${prefix}</span><span class="msgContent">${escapeHtml(message.content)}</span>${confidence}${warnings}
       </div>`;
     })
     .join('');
+
+  // Auto-scroll to bottom
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 function escapeHtml(text: string) {
