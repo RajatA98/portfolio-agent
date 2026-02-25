@@ -3,22 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ghostfolio Agent</title>
+    <title>GHOSTFOLIO TERMINAL</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="container">
-      <h1>Ghostfolio Agent</h1>
+    <header class="terminalHeader">
+      <span class="brand">GHOSTFOLIO TERMINAL</span>
+      <span class="headerRight">
+        <span><span class="dot" id="headerDot"></span> <span id="headerStatus">OFFLINE</span></span>
+        <span id="headerClock"></span>
+      </span>
+    </header>
 
+    <main class="container">
       <section id="connectSection" class="connectSection">
         <p class="connectHint">Paste your <strong>JWT</strong> (from the URL after logging in at Ghostfolio, e.g. <code>…/auth/eyJhbG…</code>) or your <strong>access token</strong> (Settings → Account).</p>
         <label>
-          Ghostfolio JWT or access token
-          <input id="accessTokenInput" type="password" placeholder="Paste JWT or access token" autocomplete="off" />
+          GHOSTFOLIO JWT OR ACCESS TOKEN
+          <input id="accessTokenInput" type="password" placeholder="PASTE JWT OR ACCESS TOKEN" autocomplete="off" />
         </label>
         <div class="connectRow">
-          <button id="connectButton" type="button">Connect</button>
-          <button id="disconnectButton" type="button">Disconnect</button>
+          <button id="connectButton" type="button">CONNECT</button>
+          <button id="disconnectButton" type="button">DISCONNECT</button>
         </div>
         <span id="connectStatus" class="connectStatus"></span>
       </section>
@@ -26,11 +32,20 @@
       <section id="messages" class="messages"></section>
 
       <section class="inputRow">
-        <input id="messageInput" type="text" placeholder="Ask anything about your portfolio" />
-        <button id="sendButton" type="button">Send</button>
+        <span class="promptChar">&gt;</span>
+        <input id="messageInput" type="text" placeholder="ENTER COMMAND..." />
+        <button id="sendButton" type="button">EXEC</button>
       </section>
+
+      <footer class="statusBar">
+        <span class="statusLeft">
+          <span class="statusDot" id="statusDot"></span>
+          <span id="statusText">DISCONNECTED</span>
+        </span>
+        <span id="statusClock"></span>
+      </footer>
     </main>
 
     <script type="module" src="./main.ts"></script>
   </body>
-  </html>
+</html>
