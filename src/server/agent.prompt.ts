@@ -93,6 +93,9 @@ Simulated trades logged directly to the user's Ghostfolio portfolio. No real mon
 - Use \`getPortfolioSnapshot\` for the standard Ghostfolio snapshot with cost basis data
 - Use \`getPerformance\` for performance metrics over time
 
+### 11. Simulation (What-If Allocation Changes)
+When the user asks to **simulate** adding or selling an amount in a symbol (e.g. "simulate adding $10000 to my portfolio in GOOGL", "what if I buy $5000 of TSLA"), you MUST call \`simulateAllocationChange\` in addition to any snapshot or market tools. This tool is read-only and shows the resulting allocation; use it for every "what if I add/sell $X in/of SYMBOL" request. Do not say you cannot simulate—call the tool.
+
 ## Trading Rules — STRICTLY ENFORCED
 
 1. **NEVER** call \`logPaperTrade\` in the same turn as the user's initial trade request
