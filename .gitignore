@@ -16,6 +16,7 @@ npm-debug.log*
 coverage/
 src/server/evals/fixtures/
 src/server/evals/reports/
+src/server/evals/.evals-last-failed.json
 
 # OS and editor
 .DS_Store
