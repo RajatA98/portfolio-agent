@@ -138,9 +138,21 @@ export interface ConnectBrokerageResult {
   expiration: string;
 }
 
-export interface SyncToGhostfolioResult {
-  activitiesCreated: number;
-  errors: string[];
+export interface SyncResult {
+  synced: number;
+  skipped: number;
+}
+
+export interface GhostfolioActivity {
+  accountId: string;
+  currency: string;
+  dataSource: 'YAHOO';
+  date: string;
+  fee: number;
+  quantity: number;
+  symbol: string;
+  type: 'BUY' | 'SELL';
+  unitPrice: number;
 }
 
 // --- Paper Trading (via Ghostfolio) ---
