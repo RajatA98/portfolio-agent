@@ -120,6 +120,7 @@ export interface AgentLoopMeta {
     | 'timeout'
     | 'cost_limit'
     | 'circuit_breaker'
+    | 'trade_blocked'
     | 'error';
 }
 

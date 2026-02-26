@@ -163,6 +163,7 @@ export class AgentService {
       const circuitBreakerMap = new Map<string, number>();
       let syntheticInjectedThisRequest = false;
       let lastResponseContent: Anthropic.ContentBlock[] | null = null;
+      let tradeProposalForFallback: string | null = null;
 
       // ─── ReAct loop: Thought → Action → Observation ───────────────
       while (iteration < agentConfig.maxIterations) {
@@ -198,13 +199,7 @@ export class AgentService {
         // Save content for post-loop text extraction
         lastResponseContent = response.content;
 
-        // If stop_reason is end_turn (or max_tokens), the LLM is done
-        if (response.stop_reason !== 'tool_use') {
-          terminationReason = 'end_turn';
-          break;
-        }
-
-        // ─── stop_reason === 'tool_use' ─────────────────────────────
+        // ─── Extract LLM tool calls (if any) ─────────────────────────
         const toolUseBlocks = response.content.filter(
           (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
         );
@@ -215,7 +210,10 @@ export class AgentService {
           input: b.input
         }));
 
-        // Synthetic tool injection: ONLY on first iteration
+        // Synthetic tool injection: ONLY on first iteration.
+        // Important: check this BEFORE the end_turn break so that if the
+        // LLM didn't call tools but the message has portfolio intent,
+        // we still inject synthetic tools (e.g. "Get market prices.").
         let syntheticToolUseBlocks: RunnableToolUse[] = [];
         if (!syntheticInjectedThisRequest) {
           syntheticToolUseBlocks = this.buildSyntheticToolUseBlocks({
@@ -228,6 +226,13 @@ export class AgentService {
         }
 
         const allToolUseBlocks = [...runnableToolUseBlocks, ...syntheticToolUseBlocks];
+
+        // If stop_reason is end_turn AND there are no synthetic tools to
+        // inject, the LLM is done.
+        if (response.stop_reason !== 'tool_use' && syntheticToolUseBlocks.length === 0) {
+          terminationReason = 'end_turn';
+          break;
+        }
 
         // If no tools to execute (shouldn't normally happen with stop_reason=tool_use)
         if (allToolUseBlocks.length === 0) {
@@ -290,6 +295,18 @@ export class AgentService {
               const blockedMsg = guardrailResult.cancelled
                 ? 'TRADE_CANCELLED: The user cancelled this trade. Do not execute it. Tell the user the trade was cancelled and nothing was executed.'
                 : (guardrailResult.proposal ?? formatTradeProposal(tradeInput as unknown as TradeGuardrailInput));
+
+              // Store trade input for deterministic fallback if LLM produces empty text
+              if (!guardrailResult.cancelled) {
+                const ti = tradeInput as unknown as TradeGuardrailInput;
+                const total = ti.quantity * ti.unitPrice;
+                tradeProposalForFallback =
+                  `I'd like to place the following paper trade — please confirm this is what you want:\n\n` +
+                  `**${ti.side.toUpperCase()} ${ti.quantity} shares of ${ti.symbol.toUpperCase()}** ` +
+                  `at $${ti.unitPrice.toFixed(2)}/share (estimated total: $${total.toFixed(2)}).\n\n` +
+                  `This is a paper trade — no real money involved. ` +
+                  `Reply 'yes' to execute, or 'cancel' to abort.`;
+              }
 
               toolTrace.push({
                 tool: toolUse.name,
@@ -390,6 +407,17 @@ export class AgentService {
         messages.push({ role: 'assistant', content: assistantContent });
         messages.push({ role: 'user', content: toolResultBlocks });
 
+        // When a trade was blocked by the guardrail, break immediately.
+        // The fallback mechanism will make a tool-free LLM call with the
+        // CONFIRMATION_REQUIRED context already in messages, producing a
+        // clean confirmation prompt instead of relying on the ReAct loop
+        // (which often generates terse/empty text for this case).
+        if (tradeBlocked) {
+          terminationReason = 'trade_blocked';
+          lastResponseContent = null; // Clear so fallback generates clean confirmation
+          break;
+        }
+
         iteration++;
       }
 
@@ -404,8 +432,11 @@ export class AgentService {
         answer = this.extractText(lastResponseContent);
       }
 
-      // If loop terminated early without a text response, generate one
-      if (!answer && terminationReason !== 'end_turn') {
+      // If loop terminated early without a text response (or trade was
+      // blocked), generate a dedicated tool-free response. For trade_blocked,
+      // always regenerate — the iteration-0 text is just "Let me check the price"
+      // preamble, not the confirmation prompt the user needs.
+      if (terminationReason === 'trade_blocked' || (!answer && terminationReason !== 'end_turn')) {
         const fallbackResponse = await client.messages.create({
           model: agentConfig.anthropicModel,
           max_tokens: agentConfig.maxTokens,
@@ -417,6 +448,12 @@ export class AgentService {
         totalInputTokens += fallbackResponse.usage?.input_tokens ?? 0;
         totalOutputTokens += fallbackResponse.usage?.output_tokens ?? 0;
         answer = this.extractText(fallbackResponse.content);
+
+        // If LLM still produced empty text for a trade_blocked case,
+        // use the deterministic confirmation prompt built from actual trade data.
+        if (!answer.trim() && terminationReason === 'trade_blocked' && tradeProposalForFallback) {
+          answer = tradeProposalForFallback;
+        }
       }
 
       answer = this.postProcessAnswer({

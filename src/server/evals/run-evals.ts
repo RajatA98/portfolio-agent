@@ -555,9 +555,35 @@ function printPerToolSummary(
   }
 }
 
+// ─── Failed cases persistence (for --retry-failed) ────────────────────
+
+const EVALS_LAST_FAILED_FILE = path.join(__dirname, '.evals-last-failed.json');
+
+interface LastFailedPayload {
+  set: EvalSet;
+  ids: string[];
+}
+
+function readLastFailed(): LastFailedPayload | null {
+  if (!fs.existsSync(EVALS_LAST_FAILED_FILE)) return null;
+  try {
+    const raw = fs.readFileSync(EVALS_LAST_FAILED_FILE, 'utf-8');
+    const data = JSON.parse(raw) as LastFailedPayload;
+    if (!data.ids?.length) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeLastFailed(set: EvalSet, failedIds: string[]): void {
+  const payload: LastFailedPayload = { set, ids: failedIds };
+  fs.writeFileSync(EVALS_LAST_FAILED_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+}
+
 // ─── Main ───────────────────────────────────────────────────────────
 
-type EvalSet = 'golden' | 'scenarios' | 'all';
+type EvalSet = 'golden' | 'sanity' | 'scenarios' | 'all';
 
 function parseEvalSetArg(): EvalSet {
   const setArg = process.argv.find((arg) => arg.startsWith('--set='));
@@ -565,16 +591,35 @@ function parseEvalSetArg(): EvalSet {
   const setIndex = process.argv.indexOf('--set');
   const setFromNext = setIndex >= 0 ? process.argv[setIndex + 1] : undefined;
   const selected = (setFromEquals ?? setFromNext ?? 'golden').toLowerCase();
+  if (selected === 'sanity') return 'sanity';
   if (selected === 'scenarios') return 'scenarios';
   if (selected === 'all') return 'all';
   return 'golden';
 }
 
+function hasRetryFailedFlag(): boolean {
+  return process.argv.includes('--retry-failed');
+}
+
 async function runEvalSet(): Promise<void> {
-  const set = parseEvalSetArg();
+  const retryFailed = hasRetryFailedFlag();
+  let set = parseEvalSetArg();
+
+  // --retry-failed: run only cases that failed in the last run
+  let retryFailedIds: string[] | null = null;
+  if (retryFailed) {
+    const last = readLastFailed();
+    if (!last || !last.ids.length) {
+      console.log('\nNo failed cases to retry. Run evals first; use --retry-failed after a run that had failures.\n');
+      return;
+    }
+    set = last.set;
+    retryFailedIds = last.ids;
+  }
 
   // Load cases based on set selection
   let goldenCases: EvalCase[] = [];
+  let sanityCases: EvalCase[] = [];
   let scenarioCases: EvalCase[] = [];
 
   if (set === 'golden' || set === 'all') {
@@ -583,21 +628,44 @@ async function runEvalSet(): Promise<void> {
     goldenCases = dirCases;
   }
 
+  if (set === 'sanity') {
+    const sanityDir = path.join(__dirname, 'sanity_sets');
+    const { cases: dirCases } = loadCasesFromDir(sanityDir);
+    sanityCases = dirCases;
+  }
+
   if (set === 'scenarios' || set === 'all') {
     const scenarioDir = path.join(__dirname, 'scenario_sets');
     const { cases: dirCases } = loadCasesFromDir(scenarioDir);
     scenarioCases = dirCases;
   }
 
-  const allCases = resolveMarketMode([...goldenCases, ...scenarioCases]);
+  let allCases = resolveMarketMode([...goldenCases, ...sanityCases, ...scenarioCases]);
+
+  if (retryFailed && retryFailedIds) {
+    const idSet = new Set(retryFailedIds);
+    allCases = allCases.filter((c) => idSet.has(c.id));
+    if (allCases.length === 0) {
+      console.log(`\nNo cases from last run's failed list found in set "${set}". (IDs may have changed.)\n`);
+      return;
+    }
+  }
+
   const setLabel =
     set === 'golden' ? 'Golden Set' :
+    set === 'sanity' ? 'Sanity Set' :
     set === 'scenarios' ? 'Scenario Set' :
     'All Evals';
 
   console.log(`\n🏆 ${setLabel}: ${allCases.length} cases loaded`);
+  if (retryFailed) {
+    console.log(`   (retrying failed cases from last run only)`);
+  }
   if (set === 'all') {
     console.log(`   (${goldenCases.length} golden + ${scenarioCases.length} scenarios)`);
+  }
+  if (set === 'sanity' && !retryFailed) {
+    console.log(`   (TDD / fast iteration — run full golden before commit)`);
   }
   console.log('');
 
@@ -612,8 +680,9 @@ async function runEvalSet(): Promise<void> {
     console.log(
       `Set EVAL_BASE_URL (and optionally EVAL_JWT) to run ${setLabel.toLowerCase()} against a live agent.\n`
     );
+    const scriptName = set === 'sanity' ? 'evals:sanity' : set === 'golden' ? 'evals:golden' : set === 'scenarios' ? 'evals:scenarios' : 'evals:all';
     console.log(
-      `Example: EVAL_BASE_URL=http://localhost:3334 EVAL_JWT=… npm run evals:${set}\n`
+      `Example: EVAL_BASE_URL=http://localhost:3334 EVAL_JWT=… npm run ${scriptName}\n`
     );
 
     console.log('Cases that would run:');
@@ -706,15 +775,28 @@ async function runEvalSet(): Promise<void> {
       const types = Array.from(new Set(failedChecks.map((c) => c.check)));
       console.log(`  ${RED}❌ ${f.id}${RESET} — ${types.join(', ')}`);
     }
+    writeLastFailed(set, failures.map((f) => f.id));
+    console.log(`\n${DIM}Failed IDs saved. Re-run only these with: npm run evals:${set === 'sanity' ? 'sanity' : set === 'golden' ? 'golden' : set === 'scenarios' ? 'scenarios' : 'all'} -- --retry-failed${RESET}`);
+  } else {
+    // All passed — clear last-failed file so next --retry-failed doesn't run stale list
+    if (fs.existsSync(EVALS_LAST_FAILED_FILE)) {
+      fs.unlinkSync(EVALS_LAST_FAILED_FILE);
+    }
   }
 
   console.log('');
 
-  // Exit 1 if golden set has failures (CI-friendly)
+  // Exit 1 if golden or sanity set has failures (CI-friendly)
   const goldenFailCount = failures.filter((f) =>
     goldenCases.some((gc) => gc.id === f.id)
   ).length;
+  const sanityFailCount = failures.filter((f) =>
+    sanityCases.some((sc) => sc.id === f.id)
+  ).length;
   if ((set === 'golden' || set === 'all') && goldenFailCount > 0) {
+    process.exit(1);
+  }
+  if (set === 'sanity' && sanityFailCount > 0) {
     process.exit(1);
   }
 }

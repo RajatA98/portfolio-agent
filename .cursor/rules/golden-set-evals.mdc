@@ -68,6 +68,8 @@ When writing or modifying `run-evals.ts`:
 src/server/evals/
   golden_sets/
     {tool_name}.eval.yaml
+  sanity_sets/
+    sanity.eval.yaml     ← 1–2 cases per tool; use during TDD to save API credits
   scenario_sets/
     edge_cases.eval.yaml
     adversarial.eval.yaml
@@ -75,4 +77,8 @@ src/server/evals/
   run-evals.ts
 ```
 
-**Run commands:** `npm run evals:golden` | `npm run evals:scenarios` | `npm run evals:all`
+**Run commands:** `npm run evals:sanity` | `npm run evals:golden` | `npm run evals:scenarios` | `npm run evals:all`
+
+**Re-run only failed:** After a run with failures, re-run just the failed evals with `npm run evals:sanity -- --retry-failed` (or the set you used). Failed IDs are logged and saved; keep using `--retry-failed` until all pass.
+
+**TDD / Cursor / Claude:** When doing TDD or iterating with Cursor/Claude, run **only the sanity set** (`npm run evals:sanity`). After failures, use `--retry-failed` to re-run only failed evals. Use the full golden set before commit or in CI.
