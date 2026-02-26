@@ -6,14 +6,6 @@ export const agentConfig = {
     );
   },
 
-  get ghostfolioJwt(): string {
-    return process.env.GHOSTFOLIO_JWT || '';
-  },
-
-  get ghostfolioAccessToken(): string {
-    return process.env.GHOSTFOLIO_ACCESS_TOKEN || '';
-  },
-
   get defaultAccountId(): string {
     return process.env.AGENT_DEFAULT_ACCOUNT_ID || '';
   },

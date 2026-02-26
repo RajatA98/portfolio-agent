@@ -12,6 +12,7 @@ import {
 } from './agent.types';
 import { computeConfidence, verifyAgentResponse } from './agent.verifier';
 import { createAnthropicClient, withLangfuseTrace } from './observability';
+import { checkTradeConfirmation, formatTradeProposal, TradeGuardrailInput } from './trade-guardrail';
 import { GhostfolioPortfolioService } from './services/ghostfolio-portfolio.service';
 import { PlaidService } from './services/plaid.service';
 import { SyncService } from './services/sync.service';
@@ -74,13 +75,14 @@ export class AgentService {
     this.toolRegistry.register({
       definition: PortfolioTradeTool.DEFINITION,
       executor: new PortfolioTradeTool(portfolioService),
-      enabled: true
+      enabled: true,
+      requiresConfirmation: true
     });
 
     // --- Plaid tools (conditionally enabled) ---
     if (agentConfig.enablePlaid) {
       const plaidService = new PlaidService();
-      const syncService = new SyncService();
+      const syncService = new SyncService(plaidService, portfolioService);
 
       this.toolRegistry.register({
         definition: PlaidConnectTool.DEFINITION,
@@ -90,7 +92,7 @@ export class AgentService {
 
       this.toolRegistry.register({
         definition: PlaidSyncTool.DEFINITION,
-        executor: new PlaidSyncTool(plaidService, syncService),
+        executor: new PlaidSyncTool(syncService),
         enabled: true
       });
     }
@@ -165,7 +167,8 @@ export class AgentService {
       const syntheticToolUseBlocks = this.buildSyntheticToolUseBlocks({
         message: request.message,
         existingToolNames: new Set(toolUseBlocks.map((b) => b.name)),
-        baseCurrency: userContext.baseCurrency
+        baseCurrency: userContext.baseCurrency,
+        conversationHistory: request.conversationHistory
       });
       const allToolUseBlocks = [...runnableToolUseBlocks, ...syntheticToolUseBlocks];
 
@@ -202,6 +205,7 @@ export class AgentService {
       };
 
       const toolResultBlocks: Anthropic.ToolResultBlockParam[] = [];
+      let tradeBlocked = false;
 
       for (const toolUse of allToolUseBlocks) {
         const startMs = Date.now();
@@ -223,6 +227,35 @@ export class AgentService {
             is_error: true
           });
           continue;
+        }
+
+        // ─── Trade confirmation guardrail ────────────────────────────
+        if (this.toolRegistry.needsConfirmation(toolUse.name)) {
+          const tradeInput = toolUse.input as Record<string, unknown>;
+          const guardrailResult = checkTradeConfirmation(
+            tradeInput as unknown as TradeGuardrailInput,
+            request.message,
+            request.conversationHistory
+          );
+
+          if (!guardrailResult.allowed) {
+            tradeBlocked = true;
+            const blockedMsg = guardrailResult.cancelled
+              ? 'TRADE_CANCELLED: The user cancelled this trade. Do not execute it. Tell the user the trade was cancelled and nothing was executed.'
+              : (guardrailResult.proposal ?? formatTradeProposal(tradeInput as unknown as TradeGuardrailInput));
+
+            toolTrace.push({
+              tool: toolUse.name,
+              ok: true,
+              ms: Date.now() - startMs
+            });
+            toolResultBlocks.push({
+              type: 'tool_result',
+              tool_use_id: toolUse.id,
+              content: JSON.stringify({ blocked: true, message: blockedMsg })
+            });
+            continue;
+          }
         }
 
         try {
@@ -262,11 +295,47 @@ export class AgentService {
         }
       }
 
+      // ─── Auto-fetch portfolio after successful trade ──────────────
+      const postTradeBlocks: RunnableToolUse[] = [];
+      if (toolResults.has('logPaperTrade') && !toolResults.has('getPortfolioSnapshot')) {
+        const snapshotExecutor = this.toolRegistry.getExecutor('getPortfolioSnapshot');
+        if (snapshotExecutor) {
+          try {
+            const snapshotStartMs = Date.now();
+            const snapshotResult = await snapshotExecutor.execute({}, toolContext);
+            toolResults.set('getPortfolioSnapshot', snapshotResult);
+            toolsSucceeded++;
+
+            const snapshotToolUse: RunnableToolUse = {
+              type: 'tool_use',
+              id: `synthetic_postTrade_snapshot_0`,
+              name: 'getPortfolioSnapshot',
+              input: {}
+            };
+            postTradeBlocks.push(snapshotToolUse);
+
+            toolTrace.push({
+              tool: 'getPortfolioSnapshot',
+              ok: true,
+              ms: Date.now() - snapshotStartMs
+            });
+            toolResultBlocks.push({
+              type: 'tool_result',
+              tool_use_id: snapshotToolUse.id,
+              content: JSON.stringify(snapshotResult)
+            });
+          } catch {
+            // Non-critical: trade already logged, just can't show updated portfolio
+          }
+        }
+      }
+
+      const extraToolUseBlocks = [...syntheticToolUseBlocks, ...postTradeBlocks];
       const assistantContentForCall2: Anthropic.ContentBlockParam[] =
-        syntheticToolUseBlocks.length
+        extraToolUseBlocks.length
           ? [
               ...(call1Response.content as unknown as Anthropic.ContentBlockParam[]),
-              ...(syntheticToolUseBlocks as Anthropic.ToolUseBlockParam[])
+              ...(extraToolUseBlocks as Anthropic.ToolUseBlockParam[])
             ]
           : (call1Response.content as unknown as Anthropic.ContentBlockParam[]);
 
@@ -276,13 +345,16 @@ export class AgentService {
         { role: 'user', content: toolResultBlocks }
       ];
 
+      // When a trade was blocked by the guardrail, don't pass tools to call2.
+      // This forces the LLM to present the confirmation in text rather than
+      // trying to re-call logPaperTrade (which would truncate the response).
       const call2Response = await client.messages.create({
         model: agentConfig.anthropicModel,
         max_tokens: agentConfig.maxTokens,
         temperature: agentConfig.temperature,
         system: systemPrompt,
         messages: call2Messages,
-        tools: anthropicTools
+        ...(tradeBlocked ? {} : { tools: anthropicTools })
       });
 
       let answer = this.extractText(call2Response.content);
@@ -358,12 +430,21 @@ export class AgentService {
   private buildSyntheticToolUseBlocks({
     message,
     existingToolNames,
-    baseCurrency
+    baseCurrency,
+    conversationHistory
   }: {
     message: string;
     existingToolNames: Set<string>;
     baseCurrency: string;
+    conversationHistory?: { role: 'user' | 'assistant'; content: string }[];
   }): RunnableToolUse[] {
+    // If the user is modifying a pending trade (conversation history has a
+    // trade confirmation and user message is neither confirm nor cancel),
+    // skip ALL synthetic tools so the LLM handles it conversationally.
+    if (this.isPendingTradeModification(message, conversationHistory)) {
+      return [];
+    }
+
     const lower = message.toLowerCase();
     const synthetic: RunnableToolUse[] = [];
     let syntheticIndex = 0;
@@ -524,6 +605,44 @@ export class AgentService {
     }
 
     return changes;
+  }
+
+  /**
+   * Returns true when conversation history indicates a pending trade
+   * confirmation and the user's latest message modifies the trade
+   * (i.e. is neither a simple confirm nor a cancel).
+   */
+  private isPendingTradeModification(
+    message: string,
+    conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
+  ): boolean {
+    if (!conversationHistory?.length) return false;
+
+    // Check if the last assistant message is a trade confirmation prompt
+    const lastAssistant = [...conversationHistory]
+      .reverse()
+      .find((m) => m.role === 'assistant');
+    if (!lastAssistant) return false;
+
+    const upper = lastAssistant.content.toUpperCase();
+    const isTradeProposal =
+      (upper.includes('CONFIRM') || upper.includes('CONFIRMATION_REQUIRED')) &&
+      (upper.includes('BUY') || upper.includes('SELL')) &&
+      (upper.includes('PAPER') || upper.includes('TRADE'));
+
+    if (!isTradeProposal) return false;
+
+    // Check if user message is a simple confirm or cancel
+    const trimmed = message.trim().toLowerCase();
+    const confirmWords = ['yes', 'y', 'confirm', 'go ahead', 'do it', 'execute', 'proceed', 'sure', 'ok', 'okay', 'yep', 'yeah', 'yup'];
+    const cancelWords = ['no', 'n', 'cancel', 'nevermind', 'never mind', 'abort', "don't", 'dont', 'stop', 'scratch that', 'nah', 'nope'];
+
+    if (confirmWords.includes(trimmed) || cancelWords.includes(trimmed)) {
+      return false; // It's a confirm/cancel, not a modification
+    }
+
+    // It's a modification of the pending trade
+    return true;
   }
 
   private postProcessAnswer({

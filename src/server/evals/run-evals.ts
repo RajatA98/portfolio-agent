@@ -69,6 +69,9 @@ interface EvalCase {
   if_market_enabled?: MarketModeOverrides;
   if_market_disabled?: MarketModeOverrides;
 
+  // Multi-turn conversation history (simulates prior turns)
+  conversation_history?: { role: 'user' | 'assistant'; content: string }[];
+
   // Labeled scenario metadata (ignored in checks, used for reporting)
   category?: string;
   subcategory?: string;
@@ -290,7 +293,12 @@ async function runCase(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${jwt}`
       },
-      body: JSON.stringify({ message: evalCase.query })
+      body: JSON.stringify({
+        message: evalCase.query,
+        ...(evalCase.conversation_history?.length
+          ? { conversationHistory: evalCase.conversation_history }
+          : {})
+      })
     });
 
     if (!res.ok) {
