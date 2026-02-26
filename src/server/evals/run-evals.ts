@@ -502,31 +502,15 @@ async function runEvalSet(): Promise<void> {
   let scenarioCases: EvalCase[] = [];
 
   if (set === 'golden' || set === 'all') {
-    // Load from golden_sets/ directory first, then fall back to golden-set.yaml
     const goldenDir = path.join(__dirname, 'golden_sets');
     const { cases: dirCases } = loadCasesFromDir(goldenDir);
-    if (dirCases.length > 0) {
-      goldenCases = dirCases;
-    } else {
-      const legacyPath = path.join(__dirname, 'golden-set.yaml');
-      if (fs.existsSync(legacyPath)) {
-        goldenCases = loadYamlCases(legacyPath);
-      }
-    }
+    goldenCases = dirCases;
   }
 
   if (set === 'scenarios' || set === 'all') {
-    // Load from scenario_sets/ directory first, then fall back to scenario-set.yaml
     const scenarioDir = path.join(__dirname, 'scenario_sets');
     const { cases: dirCases } = loadCasesFromDir(scenarioDir);
-    if (dirCases.length > 0) {
-      scenarioCases = dirCases;
-    } else {
-      const legacyPath = path.join(__dirname, 'scenario-set.yaml');
-      if (fs.existsSync(legacyPath)) {
-        scenarioCases = loadYamlCases(legacyPath);
-      }
-    }
+    scenarioCases = dirCases;
   }
 
   const allCases = resolveMarketMode([...goldenCases, ...scenarioCases]);

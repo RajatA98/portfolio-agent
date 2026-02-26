@@ -75,7 +75,6 @@ src/server/evals/
     adversarial.eval.yaml
     multi_step.eval.yaml
   run-evals.ts                ← TypeScript runner (not Python)
-  golden-set.yaml             ← legacy, prefer golden_sets/
 ```
 
 **Run commands:**

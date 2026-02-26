@@ -1,6 +1,22 @@
+# Dependencies and build
 node_modules
 dist
+*.tsbuildinfo
+
+# Environment and secrets
 .env
-npm-debug.log
+.env.local
+.env.*.local
+
+# Logs and debug
+*.log
+npm-debug.log*
+
+# Test and eval artifacts
+coverage/
 src/server/evals/fixtures/
 src/server/evals/reports/
+
+# OS and editor
+.DS_Store
+Thumbs.db
