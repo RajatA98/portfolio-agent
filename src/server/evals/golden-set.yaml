@@ -1,4 +1,0 @@
-# DEPRECATED: All golden cases live in golden_sets/*.eval.yaml (one file per tool).
-# The runner loads golden_sets/ when present; this file is only used when that directory is empty.
-# Do not add new cases here — add them to the appropriate golden_sets/{tool}.eval.yaml.
-[]
