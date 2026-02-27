@@ -6,10 +6,11 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+COPY prisma ./prisma/
+RUN npm ci
+RUN npx prisma generate
 
 COPY . .
-RUN npx prisma generate
 RUN npm run build:server && npm run build:client
 
 # Production image
