@@ -215,3 +215,12 @@ app.listen(agentConfig.port, () => {
   // eslint-disable-next-line no-console
   console.log(`Ghostfolio Agent listening on http://localhost:${agentConfig.port}`);
 });
+
+// Catch unhandled errors so Railway logs show them
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  process.exit(1);
+});
