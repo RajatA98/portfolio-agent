@@ -73,15 +73,9 @@ Along with your natural-language answer, include a JSON block with structured da
 - Format currency values with appropriate precision
 - When presenting allocation data, ensure percentages sum to approximately 100%
 
-## Brokerage & Trading Capabilities
+## Trading Capabilities
 
-### 8. PLAID — Connected Brokerages (READ ONLY)
-Connects to the user's existing brokerages (Robinhood, Fidelity, Schwab, etc.) to read holdings and transactions via Plaid.
-- Use \`connectBrokerage\` to initiate a new brokerage connection
-- Use \`syncBrokerageHoldings\` to sync brokerage holdings into Ghostfolio (pass the \`itemId\` returned after connecting)
-- These accounts are **READ ONLY** — you cannot execute trades in real brokerage accounts
-
-### 9. PAPER TRADING (via Ghostfolio)
+### 8. PAPER TRADING (via Ghostfolio)
 Simulated trades logged directly to the user's Ghostfolio portfolio. No real money involved.
 - Use \`getMarketPrices\` to get current market prices before any trade
 - Use \`logPaperTrade\` to record a simulated BUY or SELL activity
@@ -132,12 +126,9 @@ If the user sends gibberish, random characters, or off-topic messages that don't
 - Check portfolio performance over time
 - Simulate what-if buy/sell scenarios
 - Execute paper trades (simulated, no real money)
-- Get current market prices for stocks and crypto
-- Connect your brokerage account via Plaid"
+- Get current market prices for stocks and crypto"
 
 ## Account Rules
 
-- Plaid-connected accounts are **READ ONLY** — always state this if the user asks to trade there
-- All trades are paper trades logged to Ghostfolio — always remind the user this is simulated
-- Always state which account data is coming from (e.g. "From your Fidelity brokerage:" or "From your paper portfolio:")`;
+- All trades are paper trades logged to Ghostfolio — always remind the user this is simulated`;
 }

@@ -12,8 +12,6 @@ import { AuthenticatedRequest, requireAuth } from './middleware/auth';
 import { GhostfolioUserService } from './services/ghostfolio-user.service';
 import { GhostfolioAuthService } from './services/ghostfolio-auth.service';
 import { GhostfolioPortfolioService } from './services/ghostfolio-portfolio.service';
-import { PlaidService } from './services/plaid.service';
-import { SyncService } from './services/sync.service';
 
 const app = express();
 const agentService = new AgentService();
@@ -119,80 +117,6 @@ app.post('/api/chat', async (req, res) => {
     });
   }
 });
-
-// --- Plaid routes (conditionally available) ---
-if (agentConfig.enablePlaid) {
-  const plaidService = new PlaidService();
-  const portfolioService = new GhostfolioPortfolioService(ghostfolioAuthService);
-  const syncService = new SyncService(plaidService, portfolioService);
-
-  app.post('/api/plaid/link-token', async (req, res) => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const result = await plaidService.createLinkToken(authReq.userId!);
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.post('/api/plaid/exchange-token', async (req, res) => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const body = req.body as {
-        publicToken: string;
-        institutionId?: string;
-        institutionName?: string;
-      };
-      if (!body?.publicToken) {
-        res.status(400).json({ error: 'publicToken is required' });
-        return;
-      }
-      const result = await plaidService.exchangePublicToken(
-        authReq.userId!,
-        body.publicToken,
-        body.institutionId,
-        body.institutionName
-      );
-      res.json({ success: true, itemId: result.itemId });
-    } catch (error) {
-      res.status(500).json({
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.get('/api/plaid/holdings', async (req, res) => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const result = await plaidService.getHoldings(authReq.userId!);
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.post('/api/plaid/sync', async (req, res) => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const body = req.body as { itemId: string };
-      if (!body?.itemId) {
-        res.status(400).json({ error: 'itemId is required' });
-        return;
-      }
-      const result = await syncService.syncHoldingsToGhostfolio(authReq.userId!, body.itemId);
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-}
 
 // --- Serve built client ---
 const clientDistPath = path.resolve(__dirname, '../client');

@@ -89,20 +89,6 @@ export const agentConfig = {
     return process.env.CORS_ORIGIN || 'http://localhost:5179';
   },
 
-  // --- Plaid ---
-  get plaidClientId(): string {
-    return process.env.PLAID_CLIENT_ID || '';
-  },
-  get plaidSecret(): string {
-    return process.env.PLAID_SECRET || '';
-  },
-  get plaidEnv(): string {
-    return process.env.PLAID_ENV || 'sandbox';
-  },
-  get enablePlaid(): boolean {
-    return !!(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET);
-  },
-
   // --- Supabase ---
   get supabaseUrl(): string {
     return process.env.SUPABASE_URL || '';

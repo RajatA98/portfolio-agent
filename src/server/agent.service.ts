@@ -15,13 +15,9 @@ import { computeConfidence, verifyAgentResponse } from './agent.verifier';
 import { createAnthropicClient, withLangfuseTrace } from './observability';
 import { checkTradeConfirmation, formatTradeProposal, TradeGuardrailInput } from './trade-guardrail';
 import { GhostfolioPortfolioService } from './services/ghostfolio-portfolio.service';
-import { PlaidService } from './services/plaid.service';
-import { SyncService } from './services/sync.service';
 import { GetMarketPricesTool } from './tools/get-market-prices.tool';
 import { GetPerformanceTool } from './tools/get-performance.tool';
 import { GetPortfolioSnapshotTool } from './tools/get-portfolio-snapshot.tool';
-import { PlaidConnectTool } from './tools/plaid-connect.tool';
-import { PlaidSyncTool } from './tools/plaid-sync.tool';
 import { PortfolioReadTool } from './tools/portfolio-read.tool';
 import { PortfolioTradeTool } from './tools/portfolio-trade.tool';
 import { SimulateAllocationChangeTool } from './tools/simulate-allocation-change.tool';
@@ -80,23 +76,6 @@ export class AgentService {
       requiresConfirmation: true
     });
 
-    // --- Plaid tools (conditionally enabled) ---
-    if (agentConfig.enablePlaid) {
-      const plaidService = new PlaidService();
-      const syncService = new SyncService(plaidService, portfolioService);
-
-      this.toolRegistry.register({
-        definition: PlaidConnectTool.DEFINITION,
-        executor: new PlaidConnectTool(plaidService),
-        enabled: true
-      });
-
-      this.toolRegistry.register({
-        definition: PlaidSyncTool.DEFINITION,
-        executor: new PlaidSyncTool(syncService),
-        enabled: true
-      });
-    }
   }
 
   public async chat(

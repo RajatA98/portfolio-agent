@@ -29,7 +29,6 @@
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "langsmith": "^0.5.6",
-    "plaid": "^41.3.0",
     "yahoo-finance2": "^2.14.0"
   },
   "devDependencies": {

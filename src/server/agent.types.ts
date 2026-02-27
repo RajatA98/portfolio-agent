@@ -139,33 +139,6 @@ export interface AgentChatResponse {
   loopMeta?: AgentLoopMeta;
 }
 
-// --- Plaid ---
-
-export interface PlaidHolding {
-  symbol: string;
-  name: string;
-  quantity: number;
-  costBasis: Money | null;
-  currentValue: Money | null;
-  institutionName: string;
-}
-
-export interface PlaidHoldingsResult {
-  holdings: PlaidHolding[];
-  institution: string;
-  lastSynced: IsoDate;
-}
-
-export interface ConnectBrokerageResult {
-  linkToken: string;
-  expiration: string;
-}
-
-export interface SyncResult {
-  synced: number;
-  skipped: number;
-}
-
 export interface GhostfolioActivity {
   accountId: string;
   currency: string;
