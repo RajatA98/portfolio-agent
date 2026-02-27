@@ -29,15 +29,15 @@ Standalone AI agent service and frontend for Ghostfolio.
 2. Install deps: `npm install`
 3. Start the agent API: `npm run dev`
 4. In another terminal, start the client: `npm run dev:client`
-5. Open `http://localhost:5173`
+5. Open `http://localhost:5179`
 
 Ghostfolio API must be reachable at `GHOSTFOLIO_API_URL`. For the deployed app use `https://agentforge-production-e263.up.railway.app` (set in `.env` or use the default).
 
 ## See the agent (chat UI) — simple connect flow
 
 1. Start the agent: `npm run dev` (listens on `http://localhost:3334`).
-2. In another terminal, start the client: `npm run dev:client` (serves the chat UI at `http://localhost:5173`).
-3. Open `http://localhost:5173` in your browser.
+2. In another terminal, start the client: `npm run dev:client` (serves the chat UI at `http://localhost:5179`).
+3. Open `http://localhost:5179` in your browser.
 4. The UI uses same-origin requests (`/api/...`) and Vite proxies them to the agent in dev mode.
 5. **Connect with Ghostfolio** — either:
    - **JWT**: Log in at Ghostfolio in another tab; copy the JWT from the URL (e.g. `…/auth/eyJhbGciOi…`) and paste it in the agent UI, then click **Connect**, or  

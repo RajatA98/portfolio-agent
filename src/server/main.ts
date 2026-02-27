@@ -69,7 +69,29 @@ app.post('/api/chat', async (req, res) => {
         jwt = await ghostfolioAuthService.getJwt(userId);
       } catch {
         // If JWT fetch fails, try full provisioning
-        jwt = await ghostfolioUserService.ensureProvisioned(userId);
+        try {
+          jwt = await ghostfolioUserService.ensureProvisioned(userId);
+        } catch (provisionError) {
+          // Fallback: use GHOSTFOLIO_JWT from env (single-tenant mode)
+          if (agentConfig.ghostfolioJwt) {
+            jwt = agentConfig.ghostfolioJwt;
+          } else {
+            const msg = provisionError instanceof Error ? provisionError.message : String(provisionError);
+            if (msg.includes('GHOSTFOLIO_ADMIN_TOKEN') || msg.includes('required')) {
+              res.status(503).json({
+                error: 'Agent request failed: Ghostfolio is not configured (missing GHOSTFOLIO_ADMIN_TOKEN).'
+              });
+              return;
+            }
+            if (msg.includes('Ghostfolio auth failed') || msg.includes('Failed to create Ghostfolio user')) {
+              res.status(503).json({
+                error: 'Agent request failed: Cannot reach Ghostfolio. Check GHOSTFOLIO_API_URL is correct and the service is running.'
+              });
+              return;
+            }
+            throw provisionError;
+          }
+        }
       }
     }
 
@@ -88,10 +110,12 @@ app.post('/api/chat', async (req, res) => {
 
     res.json(response);
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const isNetwork = /fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|Load failed/i.test(msg);
     res.status(500).json({
-      error: `Agent request failed: ${
-        error instanceof Error ? error.message : String(error)
-      }`
+      error: isNetwork
+        ? 'Agent request failed: Cannot reach Ghostfolio. Check GHOSTFOLIO_API_URL and that the Ghostfolio instance is running.'
+        : `Agent request failed: ${msg}`
     });
   }
 });

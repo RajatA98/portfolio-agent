@@ -49,6 +49,16 @@ export async function requireAuth(
     return;
   }
 
+  // Eval/dev bypass: if token matches GHOSTFOLIO_JWT or EVAL_JWT, skip Supabase
+  const evalJwt = process.env.EVAL_JWT || '';
+  const ghostfolioJwt = process.env.GHOSTFOLIO_JWT || '';
+  if ((evalJwt && token === evalJwt) || (ghostfolioJwt && token === ghostfolioJwt)) {
+    req.userId = 'dev-user';
+    req.devJwt = token;
+    next();
+    return;
+  }
+
   try {
     const supabase = createClient(agentConfig.supabaseUrl, agentConfig.supabaseAnonKey);
     const { data, error } = await supabase.auth.getUser(token);

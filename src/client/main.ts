@@ -26,7 +26,10 @@ const signUpButton = document.getElementById('signUpButton') as HTMLButtonElemen
 const signInButton = document.getElementById('signInButton') as HTMLButtonElement;
 const signOutButton = document.getElementById('signOutButton') as HTMLButtonElement;
 const authStatusEl = document.getElementById('authStatus') as HTMLSpanElement;
-const authSection = document.getElementById('authSection') as HTMLElement;
+const authPage = document.getElementById('authPage') as HTMLElement;
+const terminalPage = document.getElementById('terminalPage') as HTMLElement;
+const headerUserEmail = document.getElementById('headerUserEmail') as HTMLSpanElement;
+const googleSignInButton = document.getElementById('googleSignInButton') as HTMLButtonElement;
 
 // Status bar elements
 const headerDot = document.getElementById('headerDot') as HTMLSpanElement;
@@ -48,7 +51,7 @@ function getAccessToken(): string | null {
 
 function setAuthStatus(text: string, isError = false): void {
   authStatusEl.textContent = text;
-  authStatusEl.className = 'connectStatus' + (isError ? ' error' : '');
+  authStatusEl.className = 'authStatusMsg' + (isError ? ' error' : '');
 }
 
 function updateTerminalStatus(): void {
@@ -62,19 +65,13 @@ function updateTerminalStatus(): void {
 function updateAuthUI(): void {
   const loggedIn = !!currentSession;
 
-  // Show/hide form fields vs sign out
-  emailInput.style.display = loggedIn ? 'none' : '';
-  passwordInput.style.display = loggedIn ? 'none' : '';
-  signUpButton.style.display = loggedIn ? 'none' : '';
-  signInButton.style.display = loggedIn ? 'none' : '';
-  signOutButton.style.display = loggedIn ? '' : 'none';
+  // Toggle between auth page and terminal (guard so we never leave both hidden)
+  if (authPage) authPage.style.display = loggedIn ? 'none' : '';
+  if (terminalPage) terminalPage.style.display = loggedIn ? '' : 'none';
 
-  // Update hint text
-  const hint = authSection.querySelector('.connectHint') as HTMLElement;
-  if (hint) {
-    hint.textContent = loggedIn
-      ? `Signed in as ${currentSession!.user.email ?? 'user'}`
-      : 'Sign up or sign in with your email and password to connect.';
+  // Show user email in terminal header
+  if (headerUserEmail) {
+    headerUserEmail.textContent = loggedIn ? (currentSession!.user.email ?? '') : '';
   }
 
   updateTerminalStatus();
@@ -169,20 +166,55 @@ async function handleSignOut(): Promise<void> {
   updateAuthUI();
 }
 
-// Listen for auth state changes (e.g. token refresh)
-supabase.auth.onAuthStateChange((_event, session) => {
+async function handleGoogleSignIn(): Promise<void> {
+  setAuthStatus('REDIRECTING TO GOOGLE...');
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin
+    }
+  });
+
+  if (error) {
+    setAuthStatus(`Google sign in failed: ${error.message}`, true);
+  }
+}
+
+// Listen for auth state changes (e.g. token refresh, OAuth callback)
+supabase.auth.onAuthStateChange((event, session) => {
   currentSession = session;
+
+  if (event === 'SIGNED_IN' && session) {
+    setAuthStatus('Signed in!');
+    // Provision Ghostfolio account (covers Google OAuth and any other provider)
+    void fetch(apiUrl('/api/auth/signup'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      }
+    }).catch(() => { /* non-fatal */ });
+  } else if (event === 'SIGNED_OUT') {
+    setAuthStatus('');
+  }
+
   updateAuthUI();
 });
 
-// Check for existing session on load
+// Check for existing session on load (including OAuth callback hash)
 async function initSession(): Promise<void> {
-  const { data } = await supabase.auth.getSession();
-  if (data.session) {
-    currentSession = data.session;
-    setAuthStatus('Signed in!');
-    updateAuthUI();
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      currentSession = data.session;
+    }
+  } catch (e) {
+    // e.g. invalid Supabase URL or network; show auth screen
+    currentSession = null;
   }
+  // Always show auth or terminal so we never get a blank screen
+  updateAuthUI();
 }
 
 // ── Event listeners ──
@@ -190,6 +222,7 @@ async function initSession(): Promise<void> {
 signUpButton.addEventListener('click', () => void handleSignUp());
 signInButton.addEventListener('click', () => void handleSignIn());
 signOutButton.addEventListener('click', () => void handleSignOut());
+googleSignInButton.addEventListener('click', () => void handleGoogleSignIn());
 
 // Allow Enter in password field to sign in
 passwordInput.addEventListener('keydown', (event) => {
@@ -512,7 +545,6 @@ async function exchangePlaidToken(
 
 // ── Init ──
 render();
-updateTerminalStatus();
 void initSession().then(() => {
   void checkPlaidAvailability();
 });
