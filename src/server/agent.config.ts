@@ -89,7 +89,7 @@ export const agentConfig = {
   },
 
   get corsOrigin(): string {
-    return process.env.CORS_ORIGIN || 'http://localhost:5173';
+    return process.env.CORS_ORIGIN || 'http://localhost:5179';
   },
 
   // --- Plaid ---
@@ -123,6 +123,11 @@ export const agentConfig = {
   },
   get ghostfolioAdminToken(): string {
     return process.env.GHOSTFOLIO_ADMIN_TOKEN || '';
+  },
+
+  // --- Ghostfolio JWT fallback (single-tenant / dev) ---
+  get ghostfolioJwt(): string {
+    return process.env.GHOSTFOLIO_JWT || '';
   },
 
   // --- Encryption ---

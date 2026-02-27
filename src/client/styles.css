@@ -12,6 +12,165 @@ body {
   line-height: 1.5;
 }
 
+/* ── Auth Page (full-screen gate) ── */
+.authPage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  z-index: 100;
+}
+
+.authCard {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 32px;
+  background: #111;
+  border: 1px solid #333;
+}
+
+.authBrand {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ff6600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.authTagline {
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+/* ── Google OAuth button ── */
+.googleSignIn {
+  width: 100%;
+  border: 1px solid #ff6600;
+  background: transparent;
+  color: #ff6600;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.googleSignIn:hover {
+  background: #ff6600;
+  color: #000;
+}
+
+/* ── Auth divider (OR separator) ── */
+.authDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.authDividerLine {
+  flex: 1;
+  height: 1px;
+  background: #333;
+}
+
+.authDividerText {
+  font-size: 10px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ── Auth form fields ── */
+.authLabel {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.authLabel input {
+  width: 100%;
+  border: 1px solid #333;
+  background: #0a0a0a;
+  color: #ff9900;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  caret-color: #ff6600;
+  outline: none;
+}
+
+.authLabel input::placeholder {
+  color: #444;
+}
+
+.authLabel input:focus {
+  border-color: #ff6600;
+}
+
+.authActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.authActions button {
+  flex: 1;
+  border: 1px solid #ff6600;
+  background: transparent;
+  color: #ff6600;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  transition: background 0.15s, color 0.15s;
+}
+
+.authActions button:hover {
+  background: #ff6600;
+  color: #000;
+}
+
+.authStatusMsg {
+  display: block;
+  margin-top: 12px;
+  font-size: 11px;
+  color: #33ff33;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  min-height: 16px;
+}
+
+.authStatusMsg.error {
+  color: #ff3333;
+}
+
+/* ── Terminal Page (full-screen wrapper) ── */
+.terminalPage {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
 /* ── Terminal header bar ── */
 .terminalHeader {
   display: flex;
@@ -20,6 +179,7 @@ body {
   padding: 8px 16px;
   background: #111;
   border-bottom: 2px solid #ff6600;
+  flex-shrink: 0;
 }
 
 .terminalHeader .brand {
@@ -50,6 +210,31 @@ body {
   vertical-align: middle;
 }
 
+.headerEmail {
+  color: #ff6600;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.headerSignOut {
+  border: 1px solid #666;
+  background: transparent;
+  color: #666;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.headerSignOut:hover {
+  border-color: #ff3333;
+  color: #ff3333;
+}
+
 /* ── Main container ── */
 .container {
   max-width: 960px;
@@ -57,94 +242,9 @@ body {
   padding: 0 16px 16px;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 41px);
-}
-
-/* ── Connect section ── */
-.connectSection {
-  margin-top: 12px;
-  padding: 12px;
-  background: #1a1a1a;
-  border: 1px solid #333;
-}
-
-.connectHint {
-  margin: 0 0 8px;
-  font-size: 11px;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.connectHint strong {
-  color: #ff9900;
-}
-
-.connectHint code {
-  font-size: 11px;
-  background: #111;
-  color: #ff6600;
-  padding: 1px 4px;
-  border: 1px solid #333;
-}
-
-.connectSection label {
-  display: grid;
-  gap: 4px;
-  font-size: 11px;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.connectRow {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.connectRow button {
-  border: none;
-  padding: 6px 14px;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 700;
-}
-
-#connectButton {
-  background: #ff6600;
-  color: #000;
-}
-
-#connectButton:hover {
-  background: #ff8533;
-}
-
-#disconnectButton {
-  background: #222;
-  color: #666;
-  border: 1px solid #333;
-}
-
-#disconnectButton:hover {
-  background: #333;
-  color: #c8c8c8;
-}
-
-.connectStatus {
-  display: block;
-  margin-top: 6px;
-  font-size: 11px;
-  color: #33ff33;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.connectStatus.error {
-  color: #ff3333;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
 }
 
 /* ── Brokerage connect section ── */
@@ -295,26 +395,6 @@ button {
   font: inherit;
 }
 
-#accessTokenInput {
-  width: 100%;
-  border: 1px solid #333;
-  background: #111;
-  color: #ff9900;
-  padding: 8px 10px;
-  font: inherit;
-  font-size: 13px;
-  caret-color: #ff6600;
-  outline: none;
-}
-
-#accessTokenInput::placeholder {
-  color: #444;
-}
-
-#accessTokenInput:focus {
-  border-color: #ff6600;
-}
-
 #messageInput {
   flex: 1;
   border: none;
@@ -385,7 +465,7 @@ button {
 }
 
 /* ── Scanline overlay effect ── */
-.container::before {
+.terminalPage .container::before {
   content: "";
   position: fixed;
   top: 0;

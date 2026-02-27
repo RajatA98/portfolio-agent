@@ -449,9 +449,10 @@ export class AgentService {
         totalOutputTokens += fallbackResponse.usage?.output_tokens ?? 0;
         answer = this.extractText(fallbackResponse.content);
 
-        // If LLM still produced empty text for a trade_blocked case,
+        // If LLM produced empty or generic text for a trade_blocked case,
         // use the deterministic confirmation prompt built from actual trade data.
-        if (!answer.trim() && terminationReason === 'trade_blocked' && tradeProposalForFallback) {
+        // This ensures the response always includes the symbol and trade details.
+        if (terminationReason === 'trade_blocked' && tradeProposalForFallback) {
           answer = tradeProposalForFallback;
         }
       }

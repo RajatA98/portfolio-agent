@@ -7,63 +7,75 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="terminalHeader">
-      <span class="brand">GHOSTFOLIO TERMINAL</span>
-      <span class="headerRight">
-        <span><span class="dot" id="headerDot"></span> <span id="headerStatus">OFFLINE</span></span>
-        <span id="headerClock"></span>
-      </span>
-    </header>
+    <!-- ===== AUTH GATE (shown when not authenticated) ===== -->
+    <div id="authPage" class="authPage">
+      <div class="authCard">
+        <div class="authBrand">GHOSTFOLIO TERMINAL</div>
+        <p class="authTagline">PORTFOLIO INTELLIGENCE SYSTEM</p>
 
-    <main class="container">
-      <section id="authSection" class="connectSection">
-        <p class="connectHint">Sign up or sign in with your email and password to connect.</p>
-        <label>
+        <button id="googleSignInButton" type="button" class="googleSignIn">SIGN IN WITH GOOGLE</button>
+
+        <div class="authDivider">
+          <span class="authDividerLine"></span>
+          <span class="authDividerText">OR</span>
+          <span class="authDividerLine"></span>
+        </div>
+
+        <label class="authLabel">
           EMAIL
           <input id="emailInput" type="email" placeholder="EMAIL" autocomplete="email" />
         </label>
-        <label>
+        <label class="authLabel">
           PASSWORD
           <input id="passwordInput" type="password" placeholder="PASSWORD" autocomplete="current-password" />
         </label>
-        <div class="connectRow">
+
+        <div class="authActions">
           <button id="signUpButton" type="button">SIGN UP</button>
           <button id="signInButton" type="button">SIGN IN</button>
-          <button id="signOutButton" type="button" style="display:none">SIGN OUT</button>
         </div>
-        <span id="authStatus" class="connectStatus"></span>
-      </section>
 
-      <section id="brokerageSection" class="brokerageSection" style="display:none">
-        <div class="brokerageRow">
-          <button id="connectBrokerageBtn" type="button">CONNECT BROKERAGE</button>
-          <span id="brokerageStatus" class="brokerageStatus"></span>
-        </div>
-      </section>
+        <span id="authStatus" class="authStatusMsg"></span>
+      </div>
+    </div>
 
-      <section id="brokerageSection" class="brokerageSection" style="display:none">
-        <div class="brokerageRow">
-          <button id="connectBrokerageBtn" type="button">CONNECT BROKERAGE</button>
-          <span id="brokerageStatus" class="brokerageStatus"></span>
-        </div>
-      </section>
-
-      <section id="messages" class="messages"></section>
-
-      <section class="inputRow">
-        <span class="promptChar">&gt;</span>
-        <input id="messageInput" type="text" placeholder="ENTER COMMAND..." />
-        <button id="sendButton" type="button">EXEC</button>
-      </section>
-
-      <footer class="statusBar">
-        <span class="statusLeft">
-          <span class="statusDot" id="statusDot"></span>
-          <span id="statusText">DISCONNECTED</span>
+    <!-- ===== TERMINAL (shown when authenticated) ===== -->
+    <div id="terminalPage" class="terminalPage" style="display:none">
+      <header class="terminalHeader">
+        <span class="brand">GHOSTFOLIO TERMINAL</span>
+        <span class="headerRight">
+          <span id="headerUserEmail" class="headerEmail"></span>
+          <span><span class="dot" id="headerDot"></span> <span id="headerStatus">OFFLINE</span></span>
+          <span id="headerClock"></span>
+          <button id="signOutButton" type="button" class="headerSignOut">SIGN OUT</button>
         </span>
-        <span id="statusClock"></span>
-      </footer>
-    </main>
+      </header>
+
+      <main class="container">
+        <section id="brokerageSection" class="brokerageSection" style="display:none">
+          <div class="brokerageRow">
+            <button id="connectBrokerageBtn" type="button">CONNECT BROKERAGE</button>
+            <span id="brokerageStatus" class="brokerageStatus"></span>
+          </div>
+        </section>
+
+        <section id="messages" class="messages"></section>
+
+        <section class="inputRow">
+          <span class="promptChar">&gt;</span>
+          <input id="messageInput" type="text" placeholder="ENTER COMMAND..." />
+          <button id="sendButton" type="button">EXEC</button>
+        </section>
+
+        <footer class="statusBar">
+          <span class="statusLeft">
+            <span class="statusDot" id="statusDot"></span>
+            <span id="statusText">DISCONNECTED</span>
+          </span>
+          <span id="statusClock"></span>
+        </footer>
+      </main>
+    </div>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
     <script type="module" src="./main.ts"></script>
