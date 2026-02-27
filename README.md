@@ -31,7 +31,7 @@ Standalone AI agent service and frontend for Ghostfolio.
 4. In another terminal, start the client: `npm run dev:client`
 5. Open `http://localhost:5179`
 
-Ghostfolio API must be reachable at `GHOSTFOLIO_API_URL`. For the deployed app use `https://agentforge-production-e263.up.railway.app` (set in `.env` or use the default).
+Set `GHOSTFOLIO_API_URL` in `.env` to your Ghostfolio API base URL (no trailing slash).
 
 ## See the agent (chat UI) — simple connect flow
 
@@ -46,11 +46,11 @@ Ghostfolio API must be reachable at `GHOSTFOLIO_API_URL`. For the deployed app u
 
 If the connect box stays visible, check the agent terminal for `Could not auto-exchange access token` and verify Ghostfolio is running and `GHOSTFOLIO_ACCESS_TOKEN` is the security token from Create Account.
 
-## Using deployed Ghostfolio
+## Using deployed or self-hosted Ghostfolio
 
-Ghostfolio is deployed at **https://agentforge-production-e263.up.railway.app**. The agent is already configured to use this URL by default.
+Set `GHOSTFOLIO_API_URL` in `.env` to your Ghostfolio instance URL.
 
-- **JWT**: Log in at [Ghostfolio](https://agentforge-production-e263.up.railway.app/en/home), copy the JWT from the URL after redirect (e.g. `…/auth/eyJhbG…`), and paste it in the agent UI → **Connect**.
+- **JWT**: Log in at your Ghostfolio URL (e.g. `…/en/home`), copy the JWT from the URL after redirect (e.g. `…/auth/eyJhbG…`), and paste it in the agent UI → **Connect**.
 - **Access token**: In Ghostfolio go to Settings → Account, create/copy your access token, paste it in the agent UI → **Connect** (the agent exchanges it for a JWT).
 
 If your agent UI is served from a different origin (e.g. another domain), set `CORS_ORIGIN` in `.env` to that origin so the browser can send the JWT to the agent.
@@ -88,7 +88,7 @@ The server serves both the API and the built frontend from a single origin.
 4. **Build**: Railway will use the `Dockerfile` if present, or Nixpacks. To force Docker: add a `railway.toml` with `builder = "DOCKERFILE"` or set the builder in the dashboard.
 5. **Env vars**: In Railway → Variables, set at least:
    - `ANTHROPIC_API_KEY` (required)
-   - `GHOSTFOLIO_API_URL` (default is the production Ghostfolio URL; override if needed)
+   - `GHOSTFOLIO_API_URL` (your Ghostfolio API base URL)
    - `CORS_ORIGIN` = your agent’s public URL (e.g. `https://your-agent.up.railway.app`) so the browser can call the API when needed.
    - Optional: `GHOSTFOLIO_ACCESS_TOKEN` or `GHOSTFOLIO_JWT` so users don’t have to connect manually.
 6. Deploy. The app listens on `PORT` (Railway sets this automatically).
