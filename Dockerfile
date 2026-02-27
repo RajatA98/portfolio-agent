@@ -24,11 +24,10 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
 
-EXPOSE 3334
 ENV NODE_ENV=production
-ENV PORT=3334
 
-USER node
 CMD ["node", "dist/server/main.js"]
