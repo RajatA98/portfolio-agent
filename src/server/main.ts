@@ -11,7 +11,6 @@ import { AgentChatRequest } from './agent.types';
 import { AuthenticatedRequest, requireAuth } from './middleware/auth';
 import { GhostfolioUserService } from './services/ghostfolio-user.service';
 import { GhostfolioAuthService } from './services/ghostfolio-auth.service';
-import { GhostfolioPortfolioService } from './services/ghostfolio-portfolio.service';
 
 const app = express();
 const agentService = new AgentService();

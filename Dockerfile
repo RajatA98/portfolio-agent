@@ -22,7 +22,7 @@ RUN apk add --no-cache openssl curl
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm ci --omit=dev
 RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
