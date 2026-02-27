@@ -1,9 +1,6 @@
 export const agentConfig = {
   get ghostfolioApiUrl(): string {
-    return (
-      process.env.GHOSTFOLIO_API_URL ||
-      'https://agentforge-production-e263.up.railway.app'
-    );
+    return process.env.GHOSTFOLIO_API_URL || '';
   },
 
   get defaultAccountId(): string {
