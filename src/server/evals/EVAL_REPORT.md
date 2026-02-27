@@ -10,8 +10,8 @@
 | Suite | Cases | Passed | Failed | Pass Rate |
 |-------|-------|--------|--------|-----------|
 | Golden Sets | 50 | 47 | 3 | 94.0% |
-| Scenarios | 17 | — | — | blocked* |
-| **Total** | **67** | — | — | — |
+| Scenarios | 26 | — | — | blocked* |
+| **Total** | **76** | — | — | — |
 
 \* Scenario evals blocked by Anthropic API overload (529) and Ghostfolio auth (403). Golden set results are from the last successful run before these transient issues.
 
@@ -112,14 +112,14 @@ These ensure `getPerformance` is synthetically injected for performance-related 
 | getMarketPrices | 4 | 4 | 2 | 10 |
 | **Total** | **21** | **22** | **7** | **50** |
 
-### Labeled Scenarios (17 cases)
+### Labeled Scenarios (26 cases)
 
 | Category | Straightforward | Moderate | Edge | Total |
 |----------|----------------|----------|------|-------|
-| Adversarial | 2 | 2 | 2 | 6 |
-| Multi-step | 2 | 2 | 1 | 5 |
+| Adversarial | 2 | 1 | 6 | 9 |
+| Multi-step | 3 | 7 | 1 | 11 |
 | Edge cases | 2 | 2 | 2 | 6 |
-| **Total** | **6** | **6** | **5** | **17** |
+| **Total** | **7** | **10** | **9** | **26** |
 
 ---
 

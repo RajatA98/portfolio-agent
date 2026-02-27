@@ -134,9 +134,9 @@ if (hasBuiltClient) {
 }
 
 // --- Start ---
-app.listen(agentConfig.port, () => {
+app.listen(agentConfig.port, '0.0.0.0', () => {
   // eslint-disable-next-line no-console
-  console.log(`Ghostfolio Agent listening on http://localhost:${agentConfig.port}`);
+  console.log(`Ghostfolio Agent listening on 0.0.0.0:${agentConfig.port}`);
 });
 
 // Catch unhandled errors so Railway logs show them

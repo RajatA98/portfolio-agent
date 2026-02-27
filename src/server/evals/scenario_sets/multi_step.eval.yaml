@@ -85,3 +85,103 @@
     - "allocation"
   must_not_contain:
     - "I don't know"
+
+- id: "sc-multi-006"
+  query: "My portfolio has been underperforming. Show me my returns and simulate adding $5000 of VTI."
+  category: multi_tool
+  subcategory: performance_and_simulation
+  difficulty: moderate
+  expected_tools:
+    - getPortfolioSnapshot
+    - getPerformance
+    - simulateAllocationChange
+  expected_sources:
+    - getPerformance
+    - simulateAllocationChange
+  must_contain:
+    - "VTI"
+  must_not_contain:
+    - "I can't"
+
+- id: "sc-multi-007"
+  query: "Compare my current allocation to my year-to-date performance by asset class."
+  category: multi_tool
+  subcategory: snapshot_and_performance
+  difficulty: moderate
+  expected_tools:
+    - getPortfolioSnapshot
+    - getPerformance
+  expected_sources:
+    - getPortfolioSnapshot
+    - getPerformance
+  must_contain:
+    - "allocation"
+  must_not_contain:
+    - "I don't know"
+
+- id: "sc-multi-008"
+  query: "Give me a complete portfolio review: what I hold, how it's performing, and what happens if I add $2000 of bonds."
+  category: multi_tool
+  subcategory: full_review
+  difficulty: moderate
+  expected_tools:
+    - getPortfolioSnapshot
+    - getPerformance
+    - simulateAllocationChange
+  expected_sources:
+    - getPortfolioSnapshot
+    - getPerformance
+    - simulateAllocationChange
+  must_contain:
+    - "allocation"
+  must_not_contain:
+    - "I can't"
+
+- id: "sc-multi-009"
+  query: "Am I overweight in tech? Simulate selling $3000 of AAPL and buying $3000 of BND."
+  category: multi_tool
+  subcategory: snapshot_and_simulation
+  difficulty: moderate
+  expected_tools:
+    - getPortfolioSnapshot
+    - simulateAllocationChange
+  expected_sources:
+    - getPortfolioSnapshot
+    - simulateAllocationChange
+  must_contain:
+    - "AAPL"
+    - "BND"
+  must_not_contain:
+    - "I can't"
+
+- id: "sc-multi-010"
+  query: "How did my portfolio do this year and what is it worth right now?"
+  category: multi_tool
+  subcategory: snapshot_and_performance
+  difficulty: straightforward
+  expected_tools:
+    - getPortfolioSnapshot
+    - getPerformance
+  expected_sources:
+    - getPortfolioSnapshot
+    - getPerformance
+  must_contain:
+    - "value"
+  must_not_contain:
+    - "I don't know"
+
+- id: "sc-multi-011"
+  query: "Show me my holdings and simulate what happens if I diversify by moving $1000 from my largest holding into VTI."
+  category: multi_tool
+  subcategory: snapshot_and_simulation
+  difficulty: moderate
+  expected_tools:
+    - getPortfolioSnapshot
+    - simulateAllocationChange
+  expected_sources:
+    - getPortfolioSnapshot
+    - simulateAllocationChange
+  must_contain:
+    - "VTI"
+  must_not_contain:
+    - "I can't"
