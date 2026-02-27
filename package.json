@@ -4,7 +4,8 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "build": "npm run build:server && npm run build:client",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && prisma migrate deploy && npm run build:server && npm run build:client",
     "build:server": "tsc -p tsconfig.json",
     "build:client": "vite build",
     "start": "node dist/server/main.js",
