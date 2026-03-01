@@ -164,6 +164,7 @@ export type AgentStreamEvent =
       warnings: string[];
       toolTrace: ToolTraceRow[];
       loopMeta?: AgentLoopMeta;
+      data?: AgentChatResponse['data'];
     }
   | { type: 'error'; message: string };
 
