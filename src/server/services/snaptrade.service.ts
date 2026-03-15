@@ -8,28 +8,27 @@ export class SnapTradeService implements BrokerageService {
   private client: Snaptrade;
 
   constructor() {
-    const raw = new Snaptrade({
+    this.client = new Snaptrade({
       clientId: agentConfig.snaptradeClientId,
       consumerKey: agentConfig.snaptradeConsumerKey
     });
 
     // GUARDRAIL: Block access to the trading API entirely.
     // This app is strictly read-only — no orders, no trades, no modifications.
-    this.client = new Proxy(raw, {
-      get(target, prop) {
-        if (prop === 'trading') {
-          throw new Error(
-            'Trading API access is blocked. This application is read-only.'
-          );
-        }
-        return (target as unknown as Record<string | symbol, unknown>)[prop];
-      }
+    Object.defineProperty(this.client, 'trading', {
+      get() {
+        throw new Error(
+          'Trading API access is blocked. This application is read-only.'
+        );
+      },
+      configurable: false
     });
   }
 
   /**
    * Register user with SnapTrade (idempotent).
    * If already registered, returns existing credentials from DB.
+   * If credentials are stale, resets the user secret automatically.
    */
   async registerUser(
     userId: string,
@@ -37,7 +36,7 @@ export class SnapTradeService implements BrokerageService {
   ): Promise<{ snaptradeUserId: string; userSecret: string }> {
     const prisma = getPrisma();
 
-    // Check if already registered
+    // Check if already registered in our DB
     const existing = await prisma.brokerageConnection.findFirst({
       where: { userId }
     });
@@ -62,38 +61,8 @@ export class SnapTradeService implements BrokerageService {
       };
     }
 
-    // Register with SnapTrade — use our internal userId as the SnapTrade userId
-    let snaptradeUserId: string;
-    let userSecret: string;
-
-    try {
-      const response = await this.client.authentication.registerSnapTradeUser({
-        userId
-      });
-      snaptradeUserId = response.data.userId ?? userId;
-      userSecret = response.data.userSecret ?? '';
-    } catch (regError: unknown) {
-      // Personal keys only allow 1 user — if already registered under a different
-      // userId, reuse the existing one by resetting the user secret.
-      const body = (regError as { responseBody?: { code?: string } })?.responseBody;
-      if (body?.code === '1012') {
-        // List existing users and reuse
-        const listRes = await this.client.authentication.listSnapTradeUsers();
-        const existingUsers = listRes.data ?? [];
-        if (existingUsers.length === 0) throw regError;
-
-        snaptradeUserId = existingUsers[0] as string;
-        // Reset user secret to get a new one
-        const resetRes = await this.client.authentication.resetSnapTradeUserSecret({
-          userId: snaptradeUserId,
-          userSecret: '' // not needed for reset
-        });
-        userSecret = (resetRes.data as { userSecret?: string })?.userSecret ?? '';
-        if (!userSecret) throw new Error('Failed to reset SnapTrade user secret');
-      } else {
-        throw regError;
-      }
-    }
+    // No DB record — ensure we have a valid SnapTrade user with a fresh secret
+    const { snaptradeUserId, userSecret } = await this.ensureSnapTradeUser(userId);
 
     // Store encrypted with per-user key
     await prisma.brokerageConnection.create({
@@ -105,6 +74,52 @@ export class SnapTradeService implements BrokerageService {
     });
 
     return { snaptradeUserId, userSecret };
+  }
+
+  /**
+   * Ensure a SnapTrade user exists and return a fresh user secret.
+   * Handles the 1012 "user already exists" case for personal API keys.
+   * NEVER deletes the SnapTrade user — that would destroy brokerage connections.
+   */
+  private async ensureSnapTradeUser(
+    userId: string
+  ): Promise<{ snaptradeUserId: string; userSecret: string }> {
+    // Try registering first
+    try {
+      const response = await this.client.authentication.registerSnapTradeUser({
+        userId
+      });
+      const secret = response.data.userSecret ?? '';
+      if (!secret) throw new Error('SnapTrade registration returned empty secret');
+      return {
+        snaptradeUserId: response.data.userId ?? userId,
+        userSecret: secret
+      };
+    } catch (regError: unknown) {
+      const body = (regError as { responseBody?: { code?: string } })?.responseBody;
+      const errStr = String(regError);
+      const isAlreadyRegistered = body?.code === '1012' || errStr.includes('1012');
+
+      if (!isAlreadyRegistered) throw regError;
+
+      console.log('[snaptrade] user already registered, resetting secret to get fresh credentials');
+
+      // List existing SnapTrade users to get the userId
+      const listRes = await this.client.authentication.listSnapTradeUsers();
+      const existingUsers = listRes.data ?? [];
+      if (existingUsers.length === 0) throw regError;
+
+      const snaptradeUserId = existingUsers[0] as string;
+
+      // Reset user secret to get a fresh one (preserves brokerage connections)
+      const resetRes = await this.client.authentication.resetSnapTradeUserSecret({
+        userId: snaptradeUserId,
+        userSecret: '' // pass empty — SnapTrade generates a new secret
+      });
+      const newSecret = (resetRes.data as { userSecret?: string })?.userSecret ?? '';
+      if (!newSecret) throw new Error('Failed to obtain SnapTrade credentials. Please try again.');
+      return { snaptradeUserId, userSecret: newSecret };
+    }
   }
 
   /**

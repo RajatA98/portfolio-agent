@@ -128,15 +128,32 @@ if (agentConfig.enableSnapTrade) {
   const snapTradeService = new SnapTradeService();
 
   app.post('/api/snaptrade/register', async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId!;
+    const supabaseUserId = authReq.supabaseUserId!;
+
     try {
-      const authReq = req as AuthenticatedRequest;
-      const result = await snapTradeService.registerUser(authReq.userId!, authReq.supabaseUserId!);
+      const result = await snapTradeService.registerUser(userId, supabaseUserId);
       res.json({ snaptradeUserId: result.snaptradeUserId });
     } catch (error: unknown) {
-      console.error('[snaptrade/register] error:', SnapTradeService.sanitizeError(error));
-      res.status(500).json({
-        error: SnapTradeService.sanitizeError(error)
-      });
+      const is401 = String(error).includes('401');
+      if (!is401) {
+        console.error('[snaptrade/register] error:', SnapTradeService.sanitizeError(error));
+        res.status(500).json({ error: SnapTradeService.sanitizeError(error) });
+        return;
+      }
+
+      // Stale credentials — refresh the secret (preserves brokerage connections)
+      console.log('[snaptrade/register] 401 detected, refreshing credentials...');
+      try {
+        const refreshed = await snapTradeService.refreshCredentials(userId, supabaseUserId);
+        res.json({ snaptradeUserId: refreshed.snaptradeUserId });
+      } catch (retryError) {
+        console.error('[snaptrade/register] refresh failed:', SnapTradeService.sanitizeError(retryError));
+        res.status(500).json({
+          error: SnapTradeService.sanitizeError(retryError)
+        });
+      }
     }
   });
 
