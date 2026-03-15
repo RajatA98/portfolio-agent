@@ -120,7 +120,6 @@ export interface AgentLoopMeta {
     | 'timeout'
     | 'cost_limit'
     | 'circuit_breaker'
-    | 'trade_blocked'
     | 'error';
 }
 
@@ -139,49 +138,22 @@ export interface AgentChatResponse {
   loopMeta?: AgentLoopMeta;
 }
 
-export interface GhostfolioActivity {
-  accountId: string;
+// --- Brokerage ---
+
+export interface BrokerageHolding {
+  symbol: string;
+  name: string;
+  quantity: number;
+  costBasis: number | null;
+  currentValue: number | null;
   currency: string;
-  dataSource: 'YAHOO';
-  date: string;
-  fee: number;
-  quantity: number;
-  symbol: string;
-  type: 'BUY' | 'SELL';
-  unitPrice: number;
+  institutionName: string;
 }
 
-// --- Paper Trading (via Ghostfolio) ---
-
-export interface PaperTradeInput {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  quantity: number;
-  unitPrice: number;
-  currency?: string;
+export interface BrokerageService {
+  getHoldings(userId: string, supabaseUserId: string): Promise<{ holdings: BrokerageHolding[] }>;
 }
 
-export interface PaperTradeResult {
-  orderId: string;
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  quantity: number;
-  unitPrice: number;
-  currency: string;
-  status: string;
-  ghostfolioSynced: boolean;
-}
-
-export interface PortfolioReadResult {
-  holdings: Array<{
-    symbol: string;
-    name?: string | null;
-    quantity: number;
-    marketPrice: number;
-    marketValue: number;
-    currency: string;
-    allocationPercent: number;
-  }>;
-  totalValue: Money;
-  asOf: IsoDate;
+export interface ConnectBrokerageResult {
+  redirectURI: string;
 }

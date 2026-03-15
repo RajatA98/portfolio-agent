@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GHOSTFOLIO TERMINAL</title>
+    <title>PORTFOLIO TERMINAL</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <!-- ===== AUTH GATE (shown when not authenticated) ===== -->
     <div id="authPage" class="authPage">
       <div class="authCard">
-        <div class="authBrand">GHOSTFOLIO TERMINAL</div>
+        <div class="authBrand">PORTFOLIO TERMINAL</div>
         <p class="authTagline">PORTFOLIO INTELLIGENCE SYSTEM</p>
 
         <button id="googleSignInButton" type="button" class="googleSignIn">SIGN IN WITH GOOGLE</button>
@@ -42,7 +42,7 @@
     <!-- ===== TERMINAL (shown when authenticated) ===== -->
     <div id="terminalPage" class="terminalPage" style="display:none">
       <header class="terminalHeader">
-        <span class="brand">GHOSTFOLIO TERMINAL</span>
+        <span class="brand">PORTFOLIO TERMINAL</span>
         <span class="headerRight">
           <span id="headerUserEmail" class="headerEmail"></span>
           <span><span class="dot" id="headerDot"></span> <span id="headerStatus">OFFLINE</span></span>
@@ -51,29 +51,74 @@
         </span>
       </header>
 
-      <main class="container">
-        <section class="brokerageSection">
-          <div class="brokerageRow">
-            <span class="brokerageStatus">BROKERAGE CONNECTIVITY — COMING SOON</span>
+      <div class="splitLayout">
+        <!-- LEFT: Terminal -->
+        <main class="terminalPanel">
+          <section class="brokerageSection">
+            <div class="brokerageRow">
+              <span id="brokerageStatusIndicator" class="brokerageStatusIndicator">NO BROKERAGE</span>
+              <button id="connectBrokerageBtn" type="button">CONNECT BROKERAGE</button>
+              <span id="brokerageStatus" class="brokerageStatus"></span>
+            </div>
+            <div id="linkedAccounts" class="linkedAccounts" style="display:none"></div>
+          </section>
+
+          <section id="messages" class="messages"></section>
+
+          <section class="inputRow">
+            <span class="promptChar">&gt;</span>
+            <input id="messageInput" type="text" placeholder="ENTER COMMAND..." />
+            <button id="sendButton" type="button">EXEC</button>
+          </section>
+
+          <footer class="statusBar">
+            <span class="statusLeft">
+              <span class="statusDot" id="statusDot"></span>
+              <span id="statusText">DISCONNECTED</span>
+            </span>
+            <span id="statusClock"></span>
+          </footer>
+        </main>
+
+        <!-- RIGHT: Portfolio Dashboard -->
+        <aside id="dashboardPanel" class="dashboardPanel" style="display:none">
+          <div class="dashboardHeader">
+            <span>PORTFOLIO OVERVIEW</span>
+            <button id="privacyToggle" type="button" class="privacyToggle" title="Toggle dollar amounts">[$]</button>
           </div>
-        </section>
 
-        <section id="messages" class="messages"></section>
+          <div class="dashboardCard">
+            <div class="cardLabel">TOTAL VALUE</div>
+            <div id="totalValue" class="cardValue">--</div>
+          </div>
 
-        <section class="inputRow">
-          <span class="promptChar">&gt;</span>
-          <input id="messageInput" type="text" placeholder="ENTER COMMAND..." />
-          <button id="sendButton" type="button">EXEC</button>
-        </section>
+          <div class="dashboardCard">
+            <div class="cardLabel">ALLOCATION</div>
+            <canvas id="allocationChart" width="200" height="200"></canvas>
+            <div id="allocationLegend" class="allocationLegend"></div>
+          </div>
 
-        <footer class="statusBar">
-          <span class="statusLeft">
-            <span class="statusDot" id="statusDot"></span>
-            <span id="statusText">DISCONNECTED</span>
-          </span>
-          <span id="statusClock"></span>
-        </footer>
-      </main>
+          <div class="dashboardCard">
+            <div class="cardLabel">PERFORMANCE</div>
+            <div id="performanceValue" class="performanceValue">--</div>
+            <div id="performanceLabel" class="performanceLabel"></div>
+            <div class="periodSelector" id="periodSelector">
+              <button class="periodBtn active" data-range="1mo">1M</button>
+              <button class="periodBtn" data-range="3mo">3M</button>
+              <button class="periodBtn" data-range="6mo">6M</button>
+              <button class="periodBtn" data-range="1y">1Y</button>
+              <button class="periodBtn" data-range="max">ALL</button>
+            </div>
+            <canvas id="historyChart" width="320" height="160"></canvas>
+            <canvas id="performanceChart" width="320" height="160" style="margin-top:8px"></canvas>
+          </div>
+
+          <div class="dashboardCard">
+            <div class="cardLabel">HOLDINGS</div>
+            <div id="holdingsTable" class="holdingsTable"></div>
+          </div>
+        </aside>
+      </div>
     </div>
 
     <script type="module" src="./main.ts"></script>

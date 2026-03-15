@@ -1,12 +1,4 @@
 export const agentConfig = {
-  get ghostfolioApiUrl(): string {
-    return process.env.GHOSTFOLIO_API_URL || '';
-  },
-
-  get defaultAccountId(): string {
-    return process.env.AGENT_DEFAULT_ACCOUNT_ID || '';
-  },
-
   get enableExternalMarketData(): boolean {
     return process.env.AGENT_ENABLE_MARKET === 'true';
   },
@@ -65,7 +57,7 @@ export const agentConfig = {
     return process.env.LANGSMITH_API_KEY || '';
   },
   get langsmithProject(): string {
-    return process.env.LANGSMITH_PROJECT || 'ghostfolio-agent';
+    return process.env.LANGSMITH_PROJECT || 'portfolio-analyzer';
   },
 
   get langfuseEnabled(): boolean {
@@ -89,6 +81,17 @@ export const agentConfig = {
     return process.env.CORS_ORIGIN || 'http://localhost:5179';
   },
 
+  // --- SnapTrade ---
+  get snaptradeClientId(): string {
+    return process.env.SNAPTRADE_CLIENT_ID || '';
+  },
+  get snaptradeConsumerKey(): string {
+    return process.env.SNAPTRADE_CONSUMER_KEY || '';
+  },
+  get enableSnapTrade(): boolean {
+    return !!(process.env.SNAPTRADE_CLIENT_ID && process.env.SNAPTRADE_CONSUMER_KEY);
+  },
+
   // --- Supabase ---
   get supabaseUrl(): string {
     return process.env.SUPABASE_URL || '';
@@ -100,22 +103,12 @@ export const agentConfig = {
     return process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   },
 
-  // --- Ghostfolio Internal (self-hosted on Railway) ---
-  get ghostfolioInternalUrl(): string {
-    return process.env.GHOSTFOLIO_INTERNAL_URL || process.env.GHOSTFOLIO_API_URL || '';
-  },
-  get ghostfolioAdminToken(): string {
-    return process.env.GHOSTFOLIO_ADMIN_TOKEN || '';
-  },
-
-  // --- Ghostfolio JWT fallback (single-tenant / dev) ---
-  get ghostfolioJwt(): string {
-    return process.env.GHOSTFOLIO_JWT || '';
-  },
-
   // --- Encryption ---
   get encryptionKey(): string {
     return process.env.ENCRYPTION_KEY || '';
+  },
+  get encryptionSalt(): string {
+    return process.env.ENCRYPTION_SALT || '';
   },
 
   // --- Database ---
