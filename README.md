@@ -1,6 +1,58 @@
 # Portfolio Agent
 
-Standalone AI agent service and frontend for Ghostfolio.
+AI-powered portfolio analysis agent: natural-language queries over your brokerage data via Claude, SnapTrade, and Yahoo Finance. Users sign in with Supabase (OAuth or email), connect brokerages through SnapTrade, and chat with the agent for snapshots, performance, and allocation what-ifs.
+
+## Project structure
+
+```
+portfolio-agent/
+├── src/
+│   ├── client/                 # Frontend (Vite + TypeScript)
+│   │   ├── index.html
+│   │   ├── main.ts             # Entry, Supabase auth, chat UI
+│   │   ├── chat-history.ts     # Conversation state
+│   │   └── styles.css
+│   └── server/                 # Express API + agent
+│       ├── main.ts             # App entry, routes, static client
+│       ├── agent.service.ts    # ReAct loop, Claude tool-calling
+│       ├── agent.config.ts     # Model, limits, prompts
+│       ├── agent.prompt.ts
+│       ├── agent.types.ts
+│       ├── agent.verifier.ts   # Response verification / guardrails
+│       ├── middleware/
+│       │   └── auth.ts         # Supabase JWT verification
+│       ├── services/
+│       │   ├── portfolio.service.ts  # SnapTrade + Yahoo, 60s cache
+│       │   └── snaptrade.service.ts  # Brokerage connections, encryption
+│       ├── tools/              # Agent tools
+│       │   ├── tool-registry.ts
+│       │   ├── get-portfolio-snapshot.tool.ts
+│       │   ├── get-performance.tool.ts
+│       │   ├── simulate-allocation-change.tool.ts
+│       │   ├── portfolio-read.tool.ts
+│       │   ├── get-market-prices.tool.ts
+│       │   └── snaptrade-connect.tool.ts
+│       ├── lib/
+│       │   ├── prisma.ts
+│       │   ├── supabase.ts
+│       │   ├── encrypt.ts      # Per-user credential encryption
+│       │   └── yahoo.ts        # Yahoo Finance (curl + cache)
+│       └── evals/
+│           ├── run-evals.ts
+│           ├── golden_sets/    # Data-retrieval eval cases
+│           ├── sanity_sets/
+│           └── scenario_sets/ # Advice/behavior cases
+├── prisma/
+│   ├── schema.prisma           # User, BrokerageConnection
+│   └── migrations/
+├── docs/
+│   └── golden-set-checks.md
+├── cloudbuild.yaml             # GCP Cloud Build
+├── Dockerfile
+└── .env.template
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for request flow, data model, and configuration.
 
 ## Requirements checklist
 
@@ -13,54 +65,53 @@ Standalone AI agent service and frontend for Ghostfolio.
 | Conversation history maintained across turns | ✓ (client sends `conversationHistory` to API) |
 | Basic error handling (graceful failure, not crashes) | ✓ |
 | At least one domain-specific verification check | ✓ (advice boundary, allocation sum, cost-basis labeling in `agent.verifier`) |
-| Simple evaluation: 5+ test cases with expected outcomes | ✓ (Jest: 5 unit tests; golden set cases in `golden_sets/*.eval.yaml`; scenario set in `scenario_sets/*.eval.yaml`) |
+| Simple evaluation: 5+ test cases with expected outcomes | ✓ (Jest unit tests; golden set in `golden_sets/*.eval.yaml`; scenario set in `scenario_sets/*.eval.yaml`) |
 | Deployed and publicly accessible | Deploy via GCP Cloud Run, Docker, or VPS (see below) |
 
 ## What it does
 
-- Exposes a chat API at `POST /api/chat`
-- Uses Claude tool-calling
-- Fetches portfolio data from Ghostfolio over HTTP using the user JWT
-- Serves a minimal standalone frontend
+- Exposes a chat API at `POST /api/chat` (Supabase JWT required).
+- Uses Claude tool-calling in a ReAct loop; tools read from SnapTrade (holdings) and Yahoo Finance (prices), with optional market-prices tool when enabled.
+- Serves a standalone frontend: sign in with Supabase (OAuth or email), optionally connect brokerages via SnapTrade Connection Portal, then chat with the agent.
 
 ## Quick start
 
-1. Copy `.env.template` to `.env` and fill in values.
+1. Copy `.env.template` to `.env` and fill in values (see [Key configuration](#key-configuration) and `.env.template` comments).
 2. Install deps: `npm install`
-3. Start the agent API: `npm run dev`
-4. In another terminal, start the client: `npm run dev:client`
-5. Open `http://localhost:5179`
+3. Set up Supabase (project, auth providers, URL + anon key). For brokerage data, set SnapTrade credentials and run Prisma migrations.
+4. Start the agent API: `npm run dev`
+5. In another terminal, start the client: `npm run dev:client`
+6. Open `http://localhost:5179`
 
-Set `GHOSTFOLIO_API_URL` in `.env` to your Ghostfolio API base URL (no trailing slash).
-
-## See the agent (chat UI) — simple connect flow
+## See the agent (chat UI)
 
 1. Start the agent: `npm run dev` (listens on `http://localhost:3334`).
-2. In another terminal, start the client: `npm run dev:client` (serves the chat UI at `http://localhost:5179`).
+2. In another terminal, start the client: `npm run dev:client` (chat UI at `http://localhost:5179`).
 3. Open `http://localhost:5179` in your browser.
-4. The UI uses same-origin requests (`/api/...`) and Vite proxies them to the agent in dev mode.
-5. **Connect with Ghostfolio** — either:
-   - **JWT**: Log in at Ghostfolio in another tab; copy the JWT from the URL (e.g. `…/auth/eyJhbGciOi…`) and paste it in the agent UI, then click **Connect**, or  
-   - **Access token**: If your Ghostfolio account has an access token (Settings → Account), paste it and click **Connect** (the agent will exchange it for a JWT).
-6. Type a message and click Send to talk to the agent.
+4. Sign in with Supabase (OAuth or email). The UI uses same-origin requests; Vite proxies `/api/*` to the agent in dev.
+5. (Optional) Connect a brokerage: use the in-app flow that calls `/api/snaptrade/connect-url` and the SnapTrade Connection Portal. Portfolio tools are only available when at least one brokerage is connected.
+6. Type a message and send to talk to the agent.
 
-If the connect box stays visible, check the agent terminal for `Could not auto-exchange access token` and verify Ghostfolio is running and `GHOSTFOLIO_ACCESS_TOKEN` is the security token from Create Account.
+If you run without Supabase configured, the server can operate in dev mode with a single synthetic user; see [ARCHITECTURE.md](ARCHITECTURE.md) (Auth flow).
 
-## Using deployed or self-hosted Ghostfolio
+## Key configuration
 
-Set `GHOSTFOLIO_API_URL` in `.env` to your Ghostfolio instance URL.
+| Purpose | Env vars |
+|--------|----------|
+| Auth & DB | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `DATABASE_URL`, `DIRECT_URL` |
+| Brokerage | `SNAPTRADE_CLIENT_ID`, `SNAPTRADE_CONSUMER_KEY` |
+| Encryption | `ENCRYPTION_KEY`, `ENCRYPTION_SALT` (see `.env.template`) |
+| Agent | `ANTHROPIC_API_KEY`, `AGENT_MODEL`, `AGENT_ENABLE_MARKET`, etc. (see [ARCHITECTURE.md](ARCHITECTURE.md)) |
+| CORS | `CORS_ORIGIN` (e.g. your frontend or Cloud Run URL) |
 
-- **JWT**: Log in at your Ghostfolio URL (e.g. `…/en/home`), copy the JWT from the URL after redirect (e.g. `…/auth/eyJhbG…`), and paste it in the agent UI → **Connect**.
-- **Access token**: In Ghostfolio go to Settings → Account, create/copy your access token, paste it in the agent UI → **Connect** (the agent exchanges it for a JWT).
-
-If your agent UI is served from a different origin (e.g. another domain), set `CORS_ORIGIN` in `.env` to that origin so the browser can send the JWT to the agent.
+If the UI is served from another origin, set `CORS_ORIGIN` in `.env` so the browser can send the JWT to the agent.
 
 ## Evaluation
 
-- **Unit tests**: `npm test` runs 5 Jest tests (agent service: direct response, portfolio snapshot, performance, synthesis, tool error handling).
-- **Golden set evals**: data-retrieval cases in `src/server/evals/golden_sets/*.eval.yaml` using four deterministic check types — tool selection, source citation, content validation, negative validation. All checks are code evals: binary pass/fail, no LLM needed. See [docs/golden-set-checks.md](docs/golden-set-checks.md) for details.
-- **Scenario evals**: advice/behavior cases in `src/server/evals/scenario_sets/*.eval.yaml` (e.g., buy/sell advice, prediction, tax-advice prompts). These are still deterministic checks but do not block CI by default.
-- **Run golden set** against a live agent: set `EVAL_BASE_URL` and `EVAL_JWT` in `.env` (or use `GHOSTFOLIO_JWT` / `GHOSTFOLIO_ACCESS_TOKEN`), then:
+- **Unit tests**: `npm test` (Jest; agent service and tool behavior).
+- **Golden set evals**: data-retrieval cases in `src/server/evals/golden_sets/*.eval.yaml` (tool selection, source citation, content validation, negative validation). See [docs/golden-set-checks.md](docs/golden-set-checks.md).
+- **Scenario evals**: `src/server/evals/scenario_sets/*.eval.yaml` (advice/behavior).
+- **Run golden set** against a live agent: set `EVAL_BASE_URL` and `EVAL_JWT` in `.env`, then:
   ```bash
   npm run evals:golden
   ```
@@ -68,7 +119,7 @@ If your agent UI is served from a different origin (e.g. another domain), set `C
   ```bash
   npm run evals:scenarios
   ```
-  Without `EVAL_BASE_URL` in `.env`, either command loads cases and prints what would run (dry run).
+  Without `EVAL_BASE_URL`, commands load cases and print what would run (dry run).
 
 ## Production build
 
@@ -97,32 +148,27 @@ The server serves both the API and the built frontend from a single origin.
      --platform managed \
      --allow-unauthenticated
    ```
-   Then set **environment variables** (and optionally secrets) in the Cloud Run service:
+   Set **environment variables** (and optionally secrets) in the Cloud Run service:
    - Required: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL`, `DIRECT_URL`, `ENCRYPTION_KEY`, `ENCRYPTION_SALT`, `CORS_ORIGIN` (e.g. `https://your-service-xxx.run.app`)
-   - Optional: `SUPABASE_SERVICE_ROLE_KEY`, `AGENT_ENABLE_MARKET`, SnapTrade, Langfuse, etc. (see `.env.template`).
-
+   - Optional: `SUPABASE_SERVICE_ROLE_KEY`, `SNAPTRADE_*`, `AGENT_ENABLE_MARKET`, Langfuse, etc. (see `.env.template`).
 4. **Database**: Run migrations once against your production DB:
    ```bash
    npx prisma migrate deploy
    ```
    Use the same `DATABASE_URL` / `DIRECT_URL` as in Cloud Run.
-
-5. Cloud Run sets `PORT` automatically; the app listens on it. Set `CORS_ORIGIN` to your Cloud Run URL (or your frontend URL if you host the UI elsewhere).
+5. Cloud Run sets `PORT` automatically. Set `CORS_ORIGIN` to your Cloud Run URL (or your frontend URL if you host the UI elsewhere).
 
 ### Option B: Docker
 
 ```bash
-# Build
 docker build -t portfolio-agent .
-
-# Run (pass env or use --env-file)
 docker run -p 3334:3334 \
   -e ANTHROPIC_API_KEY=your_key \
   -e CORS_ORIGIN=https://your-public-url \
   portfolio-agent
 ```
 
-For production, use a platform that runs the container (GCP Cloud Run, Render, Fly.io, ECS, etc.) and set the same env vars there.
+Use a platform that runs the container (GCP Cloud Run, Render, Fly.io, ECS, etc.) and set the same env vars there.
 
 ### Option C: Build and run on a VPS
 
