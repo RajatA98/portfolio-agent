@@ -11,7 +11,7 @@ RUN npx prisma generate
 
 COPY . .
 
-# Vite inlines VITE_ vars at build time — Railway exposes them as env vars
+# Vite inlines VITE_ vars at build time — pass as build-args (e.g. Cloud Build substitutions)
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL

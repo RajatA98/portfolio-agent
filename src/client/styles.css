@@ -243,7 +243,111 @@ body {
   overflow: hidden;
 }
 
-/* ── Terminal Panel (left) ── */
+/* ── Chat Sidebar ── */
+.chatSidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #0d0d0d;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.newChatBtn {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #333;
+  background: #111;
+  color: #ff6600;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.newChatBtn:hover {
+  background: #1a1a1a;
+}
+
+.chatList {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.chatList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chatList::-webkit-scrollbar-track {
+  background: #0d0d0d;
+}
+
+.chatList::-webkit-scrollbar-thumb {
+  background: #333;
+}
+
+.chatItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #1a1a1a;
+  transition: background 0.15s;
+}
+
+.chatItem:hover {
+  background: #1a1a1a;
+}
+
+.chatItem.active {
+  background: #1a1200;
+  border-left: 2px solid #ff6600;
+}
+
+.chatItemTitle {
+  flex: 1;
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatItem.active .chatItemTitle {
+  color: #ff9900;
+}
+
+.chatItemDelete {
+  border: none;
+  background: transparent;
+  color: #555;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.chatItem:hover .chatItemDelete {
+  opacity: 1;
+}
+
+.chatItemDelete:hover {
+  color: #ff3333;
+}
+
+/* ── Terminal Panel (center) ── */
 .terminalPanel {
   flex: 1;
   min-width: 0;
@@ -1086,6 +1190,34 @@ button {
 @media (max-width: 900px) {
   .splitLayout {
     flex-direction: column;
+  }
+
+  .chatSidebar {
+    width: 100%;
+    max-height: 120px;
+    border-right: none;
+    border-bottom: 1px solid #333;
+    flex-direction: row;
+  }
+
+  .chatSidebar .newChatBtn {
+    width: auto;
+    border-bottom: none;
+    border-right: 1px solid #333;
+    white-space: nowrap;
+  }
+
+  .chatList {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: flex;
+  }
+
+  .chatItem {
+    white-space: nowrap;
+    border-bottom: none;
+    border-right: 1px solid #1a1a1a;
   }
 
   .dashboardPanel {

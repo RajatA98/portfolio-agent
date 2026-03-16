@@ -1,0 +1,49 @@
+# Cloud Build: build Docker image and push to Artifact Registry.
+# The client needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY at build time —
+# set them in the Cloud Build trigger as substitution variables:
+#   _VITE_SUPABASE_URL, _VITE_SUPABASE_ANON_KEY
+# Or pass when invoking manually:
+#   gcloud builds submit --config=cloudbuild.yaml \
+#     --substitutions=_VITE_SUPABASE_URL=https://xxx.supabase.co,_VITE_SUPABASE_ANON_KEY=eyJ...
+#
+# After the image is built, deploy to Cloud Run:
+#   gcloud run deploy portfolio-agent --image REGION-docker.pkg.dev/PROJECT_ID/REPO/agent:latest ...
+# Or use the deploy-cloudrun.yaml config (set PROJECT_ID and REGION).
+
+substitutions:
+  _REGION: us-central1
+  _REPO: portfolio-agent
+  _IMAGE: agent
+  _VITE_SUPABASE_URL: ''
+  _VITE_SUPABASE_ANON_KEY: ''
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}'
+      - '--build-arg'
+      - 'VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:latest'
+      - '.'
+    dir: '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}'
+    waitFor: ['build']
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:latest'

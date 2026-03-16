@@ -47,7 +47,9 @@ export class PortfolioService {
 
       if (quote) {
         price = { currency: quote.currency, amount: quote.price };
-        value = { currency: quote.currency, amount: quote.price * h.quantity };
+        // Use Big to avoid floating-point artifacts (e.g., 421.55000000000007)
+        // that break verifier numeric matching
+        value = { currency: quote.currency, amount: new Big(quote.price).times(h.quantity).toNumber() };
       } else if (h.currentValue != null && h.quantity > 0) {
         // Fall back to brokerage institution-provided value
         const unitPrice = h.currentValue / h.quantity;

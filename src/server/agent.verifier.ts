@@ -71,6 +71,7 @@ export function verifyAgentResponse({
   // NEW: Source attribution — verify numeric claims trace to tool results
   const attrResult = checkSourceAttribution({ answer, toolResults });
   warnings.push(...attrResult.warnings);
+  confidenceAdjustment += attrResult.confidenceAdjustment;
 
   // NEW: Fact consistency — cross-validate key numeric claims
   const factResult = checkFactConsistency({ answer, toolResults });
@@ -148,12 +149,13 @@ function checkSourceAttribution({
 }: {
   answer: string;
   toolResults: Map<string, unknown>;
-}): { attributions: SourceAttribution[]; warnings: string[] } {
+}): { attributions: SourceAttribution[]; warnings: string[]; confidenceAdjustment: number } {
   const attributions: SourceAttribution[] = [];
   const warnings: string[] = [];
+  let confidenceAdjustment = 0;
 
   if (toolResults.size === 0) {
-    return { attributions, warnings };
+    return { attributions, warnings, confidenceAdjustment };
   }
 
   // Extract dollar claims from the answer (e.g., "$10,000", "$1,855.00")
@@ -161,9 +163,22 @@ function checkSourceAttribution({
   const dollarClaims = answer.match(dollarPattern) ?? [];
 
   // Build a single stringified version of all tool results for lookup
+  // Also extract all numeric values from results for fuzzy matching
   const resultStrings = new Map<string, string>();
+  const allToolNumbers = new Map<string, number[]>();
   for (const [toolName, result] of toolResults) {
-    resultStrings.set(toolName, JSON.stringify(result));
+    const str = JSON.stringify(result);
+    resultStrings.set(toolName, str);
+
+    // Pre-extract all numbers from tool results for efficient fuzzy matching
+    const nums: number[] = [];
+    const numPattern = /[\d]+(?:\.[\d]+)?/g;
+    let m: RegExpExecArray | null;
+    while ((m = numPattern.exec(str)) !== null) {
+      const val = Number(m[0]);
+      if (val > 0) nums.push(val);
+    }
+    allToolNumbers.set(toolName, nums);
   }
 
   for (const claim of dollarClaims) {
@@ -186,14 +201,11 @@ function checkSourceAttribution({
         break;
       }
 
-      // Also check if the amount is a computed sum (e.g. totalValue) that
-      // could be derived from individual holdings — allow ±2% tolerance
-      // for rounding differences in computed totals
-      const numericPattern = /[\d.]+/g;
-      let numMatch: RegExpExecArray | null;
-      while ((numMatch = numericPattern.exec(resultStr)) !== null) {
-        const toolVal = Number(numMatch[0]);
-        if (toolVal > 0 && Math.abs(toolVal - amount) / Math.max(toolVal, 1) < 0.02) {
+      // Fuzzy match: allow ±5% tolerance for live price fluctuations,
+      // floating-point artifacts, and computed values (price × quantity)
+      const toolNums = allToolNumbers.get(toolName) ?? [];
+      for (const toolVal of toolNums) {
+        if (Math.abs(toolVal - amount) / Math.max(toolVal, 1) < 0.05) {
           found = true;
           source = toolName;
           break;
@@ -205,7 +217,7 @@ function checkSourceAttribution({
     attributions.push({ claim, source, verified: found });
   }
 
-  // Only warn if there are a manageable number of unverified claims
+  // Warn and reduce confidence for unverified claims
   const unverified = attributions.filter((a) => !a.verified);
   if (unverified.length > 0 && unverified.length <= 5) {
     for (const attr of unverified) {
@@ -213,9 +225,20 @@ function checkSourceAttribution({
         `Numeric claim "${attr.claim}" could not be traced to any tool result — possible hallucination.`
       );
     }
+    // Reduce confidence proportionally: more unverified claims → lower confidence
+    const totalClaims = attributions.length;
+    const unverifiedRatio = totalClaims > 0 ? unverified.length / totalClaims : 0;
+    // Scale from 0.05 (1 unverified out of many) to 0.25 (all unverified)
+    confidenceAdjustment = Math.min(0.25, 0.05 + unverifiedRatio * 0.2);
+  } else if (unverified.length > 5) {
+    // Many unverified claims — significant confidence reduction
+    confidenceAdjustment = 0.3;
+    warnings.push(
+      `${unverified.length} numeric claims could not be traced to tool results — confidence reduced.`
+    );
   }
 
-  return { attributions, warnings };
+  return { attributions, warnings, confidenceAdjustment };
 }
 
 // ─── Fact Consistency ────────────────────────────────────────────────

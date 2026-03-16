@@ -76,6 +76,10 @@ const statusDot = document.getElementById('statusDot') as HTMLSpanElement;
 const statusText = document.getElementById('statusText') as HTMLSpanElement;
 const statusClock = document.getElementById('statusClock') as HTMLSpanElement;
 
+// Chat sidebar elements
+const newChatBtn = document.getElementById('newChatBtn') as HTMLButtonElement;
+const chatListEl = document.getElementById('chatList') as HTMLDivElement;
+
 // Brokerage elements
 const brokerageStatusIndicator = document.getElementById('brokerageStatusIndicator') as HTMLSpanElement;
 const connectBrokerageBtn = document.getElementById('connectBrokerageBtn') as HTMLButtonElement;
@@ -160,6 +164,28 @@ function updateAuthUI(): void {
 
 function initHistoryForUser(userId?: string): void {
   history = new AgentChatHistoryService(userId);
+  renderChatList();
+  render();
+}
+
+function renderChatList(): void {
+  const index = history.getIndex();
+  const currentId = history.getCurrentChatId();
+
+  chatListEl.innerHTML = index
+    .map((entry) => {
+      const isActive = entry.id === currentId;
+      return `<div class="chatItem${isActive ? ' active' : ''}" data-chat-id="${escapeHtml(entry.id)}">
+        <span class="chatItemTitle">${escapeHtml(entry.title)}</span>
+        <button class="chatItemDelete" data-delete-id="${escapeHtml(entry.id)}" title="Delete chat">&times;</button>
+      </div>`;
+    })
+    .join('');
+}
+
+function switchToChat(chatId: string): void {
+  history.switchChat(chatId);
+  renderChatList();
   render();
 }
 
@@ -313,6 +339,36 @@ messageInput.addEventListener('keydown', (event) => {
 });
 
 connectBrokerageBtn.addEventListener('click', () => void openSnapTradeConnect());
+
+// Chat sidebar events
+newChatBtn.addEventListener('click', () => {
+  history.newChat();
+  renderChatList();
+  render();
+  messageInput.focus();
+});
+
+chatListEl.addEventListener('click', (e) => {
+  const deleteBtn = (e.target as HTMLElement).closest('.chatItemDelete') as HTMLElement | null;
+  if (deleteBtn) {
+    e.stopPropagation();
+    const deleteId = deleteBtn.dataset.deleteId;
+    if (deleteId) {
+      history.deleteChat(deleteId);
+      renderChatList();
+      render();
+    }
+    return;
+  }
+
+  const chatItem = (e.target as HTMLElement).closest('.chatItem') as HTMLElement | null;
+  if (chatItem) {
+    const chatId = chatItem.dataset.chatId;
+    if (chatId) {
+      switchToChat(chatId);
+    }
+  }
+});
 
 privacyToggle.addEventListener('click', () => {
   privacyMode = !privacyMode;
@@ -1253,6 +1309,7 @@ async function sendMessageClassic(
 // ── Render ──
 
 function render(): void {
+  renderChatList();
   const messages = history.getMessages();
   messagesEl.innerHTML = messages
     .map((message) => {

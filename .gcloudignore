@@ -1,0 +1,14 @@
+# Do not upload these when using gcloud builds submit
+.git
+.gitignore
+.env
+.env.*
+!.env.template
+node_modules
+dist
+coverage
+*.log
+.evals-last-failed.json
+.cursor
+.vscode
+docs

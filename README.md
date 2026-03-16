@@ -1,4 +1,4 @@
-# Ghostfolio Agent
+# Portfolio Agent
 
 Standalone AI agent service and frontend for Ghostfolio.
 
@@ -14,7 +14,7 @@ Standalone AI agent service and frontend for Ghostfolio.
 | Basic error handling (graceful failure, not crashes) | ✓ |
 | At least one domain-specific verification check | ✓ (advice boundary, allocation sum, cost-basis labeling in `agent.verifier`) |
 | Simple evaluation: 5+ test cases with expected outcomes | ✓ (Jest: 5 unit tests; golden set cases in `golden_sets/*.eval.yaml`; scenario set in `scenario_sets/*.eval.yaml`) |
-| Deployed and publicly accessible | Deploy via Railway, Docker, or VPS (see below) |
+| Deployed and publicly accessible | Deploy via GCP Cloud Run, Docker, or VPS (see below) |
 
 ## What it does
 
@@ -80,33 +80,49 @@ The server serves both the API and the built frontend from a single origin.
 
 ## Deploying the agent
 
-### Option A: Railway (recommended)
+### Option A: GCP Cloud Run (recommended)
 
-1. Install the [Railway CLI](https://docs.railway.app/develop/cli) or connect the repo in the [Railway dashboard](https://railway.app).
-2. Create a new project and add this service (from this repo).
-3. Set **Root Directory** to this repo (or leave default if it’s the only app).
-4. **Build**: Railway will use the `Dockerfile` if present, or Nixpacks. To force Docker: add a `railway.toml` with `builder = "DOCKERFILE"` or set the builder in the dashboard.
-5. **Env vars**: In Railway → Variables, set at least:
-   - `ANTHROPIC_API_KEY` (required)
-   - `GHOSTFOLIO_API_URL` (your Ghostfolio API base URL)
-   - `CORS_ORIGIN` = your agent’s public URL (e.g. `https://your-agent.up.railway.app`) so the browser can call the API when needed.
-   - Optional: `GHOSTFOLIO_ACCESS_TOKEN` or `GHOSTFOLIO_JWT` so users don’t have to connect manually.
-6. Deploy. The app listens on `PORT` (Railway sets this automatically).
+1. **Prerequisites**: [Google Cloud SDK](https://cloud.google.com/sdk/docs/install), a GCP project, and an [Artifact Registry](https://cloud.google.com/artifact-registry/docs) repo (e.g. `portfolio-agent` in region `us-central1`).
+2. **Build and push** the image. The client needs Supabase URL/keys at build time — set them as substitution variables when submitting the build:
+   ```bash
+   gcloud builds submit --config=cloudbuild.yaml \
+     --substitutions=_VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co,_VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+   ```
+   Or in the Cloud Console: create a Build Trigger, point it at this repo and `cloudbuild.yaml`, and add substitution variables `_VITE_SUPABASE_URL`, `_VITE_SUPABASE_ANON_KEY` (and optionally `_REGION`, `_REPO`, `_IMAGE`).
+3. **Deploy to Cloud Run**:
+   ```bash
+   gcloud run deploy portfolio-agent \
+     --image us-central1-docker.pkg.dev/YOUR_PROJECT_ID/portfolio-agent/agent:latest \
+     --region us-central1 \
+     --platform managed \
+     --allow-unauthenticated
+   ```
+   Then set **environment variables** (and optionally secrets) in the Cloud Run service:
+   - Required: `ANTHROPIC_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL`, `DIRECT_URL`, `ENCRYPTION_KEY`, `ENCRYPTION_SALT`, `CORS_ORIGIN` (e.g. `https://your-service-xxx.run.app`)
+   - Optional: `SUPABASE_SERVICE_ROLE_KEY`, `AGENT_ENABLE_MARKET`, SnapTrade, Langfuse, etc. (see `.env.template`).
+
+4. **Database**: Run migrations once against your production DB:
+   ```bash
+   npx prisma migrate deploy
+   ```
+   Use the same `DATABASE_URL` / `DIRECT_URL` as in Cloud Run.
+
+5. Cloud Run sets `PORT` automatically; the app listens on it. Set `CORS_ORIGIN` to your Cloud Run URL (or your frontend URL if you host the UI elsewhere).
 
 ### Option B: Docker
 
 ```bash
 # Build
-docker build -t ghostfolio-agent .
+docker build -t portfolio-agent .
 
 # Run (pass env or use --env-file)
 docker run -p 3334:3334 \
   -e ANTHROPIC_API_KEY=your_key \
   -e CORS_ORIGIN=https://your-public-url \
-  ghostfolio-agent
+  portfolio-agent
 ```
 
-For production, use a platform that runs the container (Railway, Render, Fly.io, ECS, etc.) and set the same env vars there.
+For production, use a platform that runs the container (GCP Cloud Run, Render, Fly.io, ECS, etc.) and set the same env vars there.
 
 ### Option C: Build and run on a VPS
 
