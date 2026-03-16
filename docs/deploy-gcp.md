@@ -45,7 +45,18 @@ After deploy you’ll set `CORS_ORIGIN` to your Cloud Run URL (e.g. `https://por
 
 ## 4. Build and push the image
 
-From the repo root (where `cloudbuild.yaml` lives):
+From the repo root, either use the script (reads from `.env`) or pass values manually.
+
+**Option A — use `.env` (recommended):**
+
+```bash
+chmod +x scripts/gcp-build.sh
+./scripts/gcp-build.sh
+```
+
+The script reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from `.env` and runs the build.
+
+**Option B — pass values manually:**
 
 ```bash
 gcloud builds submit --config=cloudbuild.yaml \
@@ -91,6 +102,23 @@ Run this once per production database, or whenever you add new migrations.
 ## 8. Open the app
 
 Visit the Cloud Run service URL. The server serves the built frontend; sign in with Supabase and (optionally) connect a brokerage via SnapTrade.
+
+---
+
+## Fix: Developer Connect 403 (fetchReadToken denied)
+
+If you use **Developer Connect** (CI/CD from GitHub) and the build fails with:
+
+`Permission 'developerconnect.gitRepositoryLinks.fetchReadToken' denied`
+
+grant the Cloud Build service account the Developer Connect read-token role (run once from repo root):
+
+```bash
+chmod +x scripts/gcp-fix-developer-connect-iam.sh
+./scripts/gcp-fix-developer-connect-iam.sh
+```
+
+Then re-run the build (e.g. push a commit or trigger a new deployment).
 
 ---
 

@@ -136,7 +136,7 @@ The server serves both the API and the built frontend from a single origin.
 See **[docs/deploy-gcp.md](docs/deploy-gcp.md)** for a step-by-step guide.
 
 1. **Prerequisites**: [Google Cloud SDK](https://cloud.google.com/sdk/docs/install), a GCP project, and an [Artifact Registry](https://cloud.google.com/artifact-registry/docs) repo (e.g. `portfolio-agent` in region `us-central1`).
-2. **Build and push** the image. The client needs Supabase URL/keys at build time — set them as substitution variables when submitting the build:
+2. **Build and push** the image. The client needs Supabase URL/keys at build time. From the repo root, run `./scripts/gcp-build.sh` (reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from `.env`), or pass them manually:
    ```bash
    gcloud builds submit --config=cloudbuild.yaml \
      --substitutions=_VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co,_VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
