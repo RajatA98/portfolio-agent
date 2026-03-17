@@ -74,4 +74,13 @@ export class UsageService {
     const summary = await this.getUsageForCurrentPeriod(userId);
     return summary?.totalTokens ?? 0;
   }
+
+  /**
+   * Reset token usage for all accounts (all periods). Use for admin/maintenance only.
+   */
+  async resetAllUsage(): Promise<number> {
+    const prisma = getPrisma();
+    const result = await prisma.usage.deleteMany({});
+    return result.count;
+  }
 }

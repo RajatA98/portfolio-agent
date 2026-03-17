@@ -2,6 +2,10 @@
 
 AI-powered portfolio analysis agent: natural-language queries over your brokerage data via Claude, SnapTrade, and Yahoo Finance. Users sign in with Supabase (OAuth or email), connect brokerages through SnapTrade, and chat with the agent for snapshots, performance, and allocation what-ifs.
 
+## Live app
+
+**[Portfolio Agent](https://portfolio-agent-git-756982711593.us-central1.run.app)** — sign in with Supabase and start chatting.
+
 ## Project structure
 
 ```

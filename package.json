@@ -15,7 +15,8 @@
     "evals:golden": "tsx src/server/evals/run-evals.ts --set golden",
     "evals:sanity": "tsx src/server/evals/run-evals.ts --set sanity",
     "evals:scenarios": "tsx src/server/evals/run-evals.ts --set scenarios",
-    "evals:all": "tsx src/server/evals/run-evals.ts --set all"
+    "evals:all": "tsx src/server/evals/run-evals.ts --set all",
+    "reset-usage": "tsx scripts/reset-usage.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
