@@ -64,13 +64,13 @@ Chronological record of major technical decisions and the reasoning behind them.
 
 ---
 
-### 2026-03-13 — Replace SnapTrade with SnapTrade
+### 2026-03-13 — Use SnapTrade for brokerage connectivity (Plaid considered first)
 
-**Decision:** Remove SnapTrade entirely and use SnapTrade for brokerage connectivity. SnapTrade provides a Connection Portal (popup) and read-only access to holdings across brokerages.
+**Decision:** Use SnapTrade for brokerage connectivity instead of Plaid. SnapTrade provides a Connection Portal (popup) and read-only access to holdings across brokerages.
 
-**Why:** SnapTrade offers broader brokerage coverage, simpler integration (no webhook handling), and a managed connection portal UI. The agent only needs read-only access to holdings.
+**Why:** Plaid was considered first, but getting approval and going through Plaid’s compliance hurdles would have slowed the project. Since the goal was to learn about AI agents rather than ship a production fintech product, SnapTrade was the quicker option: simpler signup, no lengthy approval process, and a managed connection portal. SnapTrade also offers broad brokerage coverage, simpler integration (no webhook handling), and the agent only needs read-only access to holdings.
 
-**Impact:** Deleted SnapTradeService, SnapTradeItem model, SnapTrade Link integration. Added SnapTradeService, BrokerageConnection model, SnapTrade Connection Portal popup flow. All env vars changed from PLAID_* to SNAPTRADE_*.
+**Impact:** Deleted prior brokerage integration (e.g. SnapTrade/other if any). Added SnapTradeService, BrokerageConnection model, SnapTrade Connection Portal popup flow. Env vars use SNAPTRADE_*.
 
 ---
 

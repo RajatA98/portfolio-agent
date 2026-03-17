@@ -2,6 +2,10 @@
 
 > Portfolio Analyzer — A standalone AI-powered portfolio analysis agent using Claude, SnapTrade, and Yahoo Finance.
 
+## Brokerage connectivity: why SnapTrade
+
+Plaid was considered first for brokerage linking. Plaid’s approval and compliance process added friction and delay. For a project focused on learning AI agents rather than production fintech, **SnapTrade was the quicker option**: simpler signup, a ready-made Connection Portal, and read-only access to holdings across many brokerages. The agent only needs to read portfolio data, so SnapTrade’s offering was a good fit without the hurdles of Plaid’s approval path.
+
 ## System Overview
 
 ```mermaid

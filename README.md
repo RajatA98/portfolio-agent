@@ -1,10 +1,10 @@
 # Portfolio Agent
 
-AI-powered portfolio analysis agent: natural-language queries over your brokerage data via Claude, SnapTrade, and Yahoo Finance. Users sign in with Supabase (OAuth or email), connect brokerages through SnapTrade, and chat with the agent for snapshots, performance, and allocation what-ifs.
+AI-powered portfolio analysis agent: natural-language queries over your brokerage data via Claude, SnapTrade, and Yahoo Finance. Connect brokerages through SnapTrade and chat with the agent for snapshots, performance, and allocation what-ifs.
 
 ## Live app
 
-**[Portfolio Agent](https://portfolio-agent-git-756982711593.us-central1.run.app)** — sign in with Supabase and start chatting.
+**[Portfolio Agent](https://portfolio-agent-git-756982711593.us-central1.run.app)** — launch the app and start chatting.
 
 ## Project structure
 
@@ -76,7 +76,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for request flow, data model, and configu
 
 - Exposes a chat API at `POST /api/chat` (Supabase JWT required).
 - Uses Claude tool-calling in a ReAct loop; tools read from SnapTrade (holdings) and Yahoo Finance (prices), with optional market-prices tool when enabled.
-- Serves a standalone frontend: sign in with Supabase (OAuth or email), optionally connect brokerages via SnapTrade Connection Portal, then chat with the agent.
+- Serves a standalone frontend: optionally connect brokerages via SnapTrade Connection Portal, then chat with the agent.
 
 ## Quick start
 
@@ -92,7 +92,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for request flow, data model, and configu
 1. Start the agent: `npm run dev` (listens on `http://localhost:3334`).
 2. In another terminal, start the client: `npm run dev:client` (chat UI at `http://localhost:5179`).
 3. Open `http://localhost:5179` in your browser.
-4. Sign in with Supabase (OAuth or email). The UI uses same-origin requests; Vite proxies `/api/*` to the agent in dev.
+4. The UI uses same-origin requests; Vite proxies `/api/*` to the agent in dev.
 5. (Optional) Connect a brokerage: use the in-app flow that calls `/api/snaptrade/connect-url` and the SnapTrade Connection Portal. Portfolio tools are only available when at least one brokerage is connected.
 6. Type a message and send to talk to the agent.
 
