@@ -478,9 +478,7 @@ const landingPath = path.join(clientDistPath, 'landing.html');
 const hasBuiltClient = existsSync(clientIndexPath);
 
 if (hasBuiltClient) {
-  app.use(express.static(clientDistPath));
-
-  // Landing page at root
+  // Landing page at root (before static middleware so index.html doesn't override)
   app.get('/', (_req, res) => {
     if (existsSync(landingPath)) {
       res.sendFile(landingPath);
@@ -489,10 +487,12 @@ if (hasBuiltClient) {
     }
   });
 
-  // App at /app (and all sub-routes for SPA)
+  // App at /app
   app.get('/app', (_req, res) => {
     res.sendFile(clientIndexPath);
   });
+
+  app.use(express.static(clientDistPath));
 
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api/') || req.path === '/health' || req.path === '/snaptrade/callback') {
