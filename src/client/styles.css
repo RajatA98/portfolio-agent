@@ -477,45 +477,6 @@ body {
   color: #666;
 }
 
-/* ── Period selector ── */
-.periodSelector {
-  display: flex;
-  gap: 4px;
-  margin: 10px 0 8px;
-}
-
-.periodBtn {
-  border: 1px solid #333;
-  background: transparent;
-  color: #666;
-  padding: 3px 10px;
-  font: inherit;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: all 0.15s;
-}
-
-.periodBtn:hover {
-  border-color: #ff6600;
-  color: #ff6600;
-}
-
-.periodBtn.active {
-  border-color: #ff6600;
-  background: #ff6600;
-  color: #000;
-}
-
-/* ── History chart ── */
-#historyChart {
-  display: block;
-  width: 100%;
-  height: 160px;
-}
-
 /* ── Performance ── */
 .performanceValue {
   font-size: 20px;

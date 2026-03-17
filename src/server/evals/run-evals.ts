@@ -19,19 +19,24 @@
  * - Content/Negative: substring in normalized response text (whitespace collapsed, case-insensitive).
  * - Extended: confidence ≤ threshold, allocation sum within tolerance; all arithmetic on response data only.
  *
- * Loads .env from project root. Set EVAL_BASE_URL and JWT; run: npm run evals
+ * Loads .env from project root. Uses mock brokerage data so no live server or auth needed.
+ * Requires ANTHROPIC_API_KEY in .env (the agent LLM is under test).
  */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as yaml from 'js-yaml';
 
-// Load .env from project root so EVAL_BASE_URL and JWT are available
+// Load .env from project root so ANTHROPIC_API_KEY is available
 import { config } from 'dotenv';
 
-// Do not add any LLM/AI SDK imports (e.g. @anthropic-ai/sdk, openai). Pass/fail must stay code-only.
 const projectRoot = path.resolve(__dirname, '../../..');
 config({ path: path.join(projectRoot, '.env') });
+
+// Agent imports — the agent (under test) uses an LLM; the eval pass/fail logic does not.
+import { AgentService } from '../agent.service';
+import type { AgentChatResponse } from '../agent.types';
+import { MockBrokerageService } from './mock-brokerage';
 
 // Terminal colors for PASS / FAIL
 const GREEN = '\x1b[32m';
@@ -337,12 +342,9 @@ async function sleep(ms: number): Promise<void> {
 // ─── Run a Single Case ──────────────────────────────────────────────
 
 async function runCase(
-  baseUrl: string,
-  jwt: string,
+  agent: AgentService,
   evalCase: EvalCase
 ): Promise<CaseResult> {
-  const url = `${baseUrl.replace(/\/$/, '')}/api/chat`;
-
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
       const delayMs = BASE_DELAY_MS * Math.pow(2, attempt - 1);
@@ -350,38 +352,32 @@ async function runCase(
       await sleep(delayMs);
     }
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${jwt}`
-      },
-      body: JSON.stringify({
-        message: evalCase.query,
-        ...(evalCase.conversation_history?.length
-          ? { conversationHistory: evalCase.conversation_history }
-          : {})
-      })
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      if (res.status === 529 && attempt < MAX_RETRIES) continue;
+    let response: AgentChatResponse;
+    try {
+      response = await agent.chat(
+        {
+          message: evalCase.query,
+          ...(evalCase.conversation_history?.length
+            ? { conversationHistory: evalCase.conversation_history }
+            : {})
+        },
+        {
+          userId: 'eval-user',
+          supabaseUserId: 'eval-user',
+          baseCurrency: 'USD',
+          language: 'en'
+        }
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('overloaded') && attempt < MAX_RETRIES) continue;
       return {
         id: evalCase.id,
         passed: false,
-        checks: [
-          {
-            check: 'http',
-            passed: false,
-            detail: `✗ HTTP ${res.status}: ${text.slice(0, 200)}`
-          }
-        ],
+        checks: [{ check: 'agent_error', passed: false, detail: `✗ Agent error: ${msg.slice(0, 200)}` }],
         actual: null
       };
     }
-
-    const response = (await res.json()) as AgentResponse;
 
     // Retry if the agent caught a 529 from the upstream LLM API
     if (isRetryableError(response.answer) && attempt < MAX_RETRIES) continue;
@@ -492,7 +488,7 @@ async function runCase(
     passed: false,
     checks: [
       {
-        check: 'http',
+        check: 'agent_error',
         passed: false,
         detail: `✗ All ${MAX_RETRIES} retries exhausted (upstream LLM overloaded)`
       }
@@ -669,20 +665,8 @@ async function runEvalSet(): Promise<void> {
   }
   console.log('');
 
-  const baseUrl = process.env.EVAL_BASE_URL;
-  const jwt =
-    process.env.EVAL_JWT ||
-    '';
-
-  if (!baseUrl) {
-    console.log(
-      `Set EVAL_BASE_URL (and optionally EVAL_JWT) to run ${setLabel.toLowerCase()} against a live agent.\n`
-    );
-    const scriptName = set === 'sanity' ? 'evals:sanity' : set === 'golden' ? 'evals:golden' : set === 'scenarios' ? 'evals:scenarios' : 'evals:all';
-    console.log(
-      `Example: EVAL_BASE_URL=http://localhost:3334 EVAL_JWT=… npm run ${scriptName}\n`
-    );
-
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log('Set ANTHROPIC_API_KEY in .env to run evals (the agent LLM is under test).\n');
     console.log('Cases that would run:');
     for (const c of allCases) {
       console.log(`  ${c.id}: "${c.query}"`);
@@ -690,11 +674,10 @@ async function runEvalSet(): Promise<void> {
     return;
   }
 
-  if (!jwt) {
-    console.warn(
-      '⚠  No EVAL_JWT set; requests may get 401.\n'
-    );
-  }
+  // Create agent with mock brokerage — no server, no auth, no real brokerage needed
+  console.log('  Using mock brokerage data (in-process, no server required)\n');
+  const mockBrokerage = new MockBrokerageService();
+  const agent = new AgentService({ brokerageService: mockBrokerage });
 
   let passed = 0;
   let failed = 0;
@@ -702,7 +685,7 @@ async function runEvalSet(): Promise<void> {
   const allResults: CaseResult[] = [];
 
   for (const evalCase of allCases) {
-    const result = await runCase(baseUrl, jwt, evalCase);
+    const result = await runCase(agent, evalCase);
     allResults.push(result);
     const expectedParts: string[] = [];
     expectedParts.push(`tools: [${evalCase.expected_tools.join(', ')}]`);

@@ -92,6 +92,80 @@
   max_cost_usd: 0.15
   max_iterations: 3
 
+# ─── getTransactionHistory ─────────────────────────────────────────
+
+- id: "sanity-txn-001"
+  query: "Show me my recent transactions"
+  expected_tools:
+    - getTransactionHistory
+  expected_sources:
+    - getTransactionHistory
+  must_contain:
+    - "transaction"
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "sanity-txn-002"
+  query: "What dividends have I received?"
+  expected_tools:
+    - getTransactionHistory
+  expected_sources:
+    - getTransactionHistory
+  must_contain:
+    - "dividend"
+  must_not_contain:
+    - "I don't know"
+
+# ─── getAccountBalances ───────────────────────────────────────────
+
+- id: "sanity-bal-001"
+  query: "How much cash do I have in my brokerage account?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain:
+    - "cash"
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "sanity-bal-002"
+  query: "What is my buying power?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+# ─── getReturnRates ──────────────────────────────────────────────
+
+- id: "sanity-rr-001"
+  query: "What are my return rates?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain:
+    - "return"
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "sanity-rr-002"
+  query: "What is my 1-year return on my investments?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain:
+    - "return"
+  must_not_contain:
+    - "I don't know"
+
 # ─── read-only guardrail ─────────────────────────────────────────────
 
 - id: "sanity-readonly-001"

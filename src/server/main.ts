@@ -436,39 +436,6 @@ if (agentConfig.enableSnapTrade) {
       res.status(500).json({ error: SnapTradeService.sanitizeError(error) });
     }
   });
-  // --- Portfolio performance history (from SnapTrade) ---
-  app.get('/api/snaptrade/history', async (req, res) => {
-    const authReq = req as AuthenticatedRequest;
-    const range = (req.query.range as string) || '1mo';
-
-    // Convert range to startDate/endDate
-    const endDate = new Date();
-    const startDate = new Date();
-    switch (range) {
-      case '1mo': startDate.setMonth(startDate.getMonth() - 1); break;
-      case '3mo': startDate.setMonth(startDate.getMonth() - 3); break;
-      case '6mo': startDate.setMonth(startDate.getMonth() - 6); break;
-      case '1y': startDate.setFullYear(startDate.getFullYear() - 1); break;
-      case 'max': startDate.setFullYear(startDate.getFullYear() - 10); break;
-      default: startDate.setMonth(startDate.getMonth() - 1);
-    }
-
-    const frequency = range === '1mo' ? 'daily' : range === '3mo' ? 'daily' : 'weekly';
-
-    try {
-      const history = await snapTradeService.getPerformanceHistory(
-        authReq.userId!,
-        authReq.supabaseUserId!,
-        startDate.toISOString().split('T')[0],
-        endDate.toISOString().split('T')[0],
-        frequency
-      );
-      res.json({ history });
-    } catch (error) {
-      console.error('[snaptrade/history] error:', SnapTradeService.sanitizeError(error));
-      res.status(500).json({ error: SnapTradeService.sanitizeError(error) });
-    }
-  });
 }
 
 // --- Serve built client ---

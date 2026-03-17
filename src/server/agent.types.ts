@@ -38,6 +38,8 @@ export interface PortfolioSnapshotResult {
   allocationByAssetClass?: AllocationRow[];
   holdings: HoldingRow[];
   isPriceDataMissing: boolean;
+  /** Maps symbol → per-share price for verifier computed-value matching */
+  priceMap?: Record<string, number>;
 }
 
 export interface PerformancePoint {
@@ -138,6 +140,63 @@ export interface AgentChatResponse {
   loopMeta?: AgentLoopMeta;
 }
 
+// --- Transaction History ---
+
+export interface TransactionRow {
+  date: string;
+  type: string;
+  symbol: string;
+  description: string;
+  quantity: number | null;
+  price: Money | null;
+  amount: Money;
+  currency: string;
+  accountName: string;
+}
+
+export interface TransactionHistoryResult {
+  accountId: string;
+  transactions: TransactionRow[];
+  totalCount: number;
+  filters: {
+    startDate?: string;
+    endDate?: string;
+    type?: string;
+    symbol?: string;
+  };
+}
+
+// --- Account Balances ---
+
+export interface BalanceRow {
+  accountId: string;
+  accountName: string;
+  institutionName: string;
+  currency: string;
+  cash: number;
+  buyingPower: number | null;
+}
+
+export interface AccountBalancesResult {
+  balances: BalanceRow[];
+  totalCash: Money;
+  asOf: IsoDate;
+}
+
+// --- Return Rates ---
+
+export interface ReturnRateRow {
+  accountId: string;
+  accountName: string;
+  timeframe: string;
+  returnPercent: number;
+}
+
+export interface ReturnRatesResult {
+  rates: ReturnRateRow[];
+  asOf: IsoDate;
+}
+
 // --- Brokerage ---
 
 export interface BrokerageHolding {
@@ -152,6 +211,28 @@ export interface BrokerageHolding {
 
 export interface BrokerageService {
   getHoldings(userId: string, supabaseUserId: string): Promise<{ holdings: BrokerageHolding[] }>;
+  getTransactions(
+    userId: string,
+    supabaseUserId: string,
+    opts?: { startDate?: string; endDate?: string; type?: string }
+  ): Promise<Array<{
+    date: string; type: string; symbol: string; description: string;
+    quantity: number | null; price: number | null; amount: number;
+    currency: string; accountName: string;
+  }>>;
+  getBalances(
+    userId: string,
+    supabaseUserId: string
+  ): Promise<Array<{
+    accountId: string; accountName: string; institutionName: string;
+    currency: string; cash: number; buyingPower: number | null;
+  }>>;
+  getReturnRates(
+    userId: string,
+    supabaseUserId: string
+  ): Promise<Array<{
+    accountId: string; accountName: string; timeframe: string; returnPercent: number;
+  }>>;
 }
 
 export interface ConnectBrokerageResult {

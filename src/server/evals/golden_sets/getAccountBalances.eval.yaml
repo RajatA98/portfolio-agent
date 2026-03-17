@@ -1,0 +1,131 @@
+# Golden Set — getAccountBalances
+# Tests account balances tool: cash, buying power, uninvested funds
+
+# ─── Happy Path ─────────────────────────────────────────────────────
+
+- id: "gs-bal-001"
+  query: "How much cash do I have in my brokerage account?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain:
+    - "cash"
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "gs-bal-002"
+  query: "What is my buying power?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "gs-bal-003"
+  query: "How much uninvested money do I have?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "gs-bal-004"
+  query: "Show me the cash balance across all my accounts"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+- id: "gs-bal-005"
+  query: "What funds do I have available to invest?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+# ─── Ambiguous Queries ─────────────────────────────────────────────
+
+- id: "gs-bal-006"
+  query: "What's my balance?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+- id: "gs-bal-007"
+  query: "Do I have enough cash to buy $1000 of AAPL?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain:
+    - "AAPL"
+  must_not_contain:
+    - "I don't know"
+
+# ─── Combined Queries ──────────────────────────────────────────────
+
+- id: "gs-bal-008"
+  query: "What's my total portfolio value including cash?"
+  expected_tools:
+    - getPortfolioSnapshot
+    - getAccountBalances
+  expected_sources:
+    - getPortfolioSnapshot
+  must_contain:
+    - "value"
+  must_not_contain:
+    - "I don't know"
+
+# ─── Edge Cases ────────────────────────────────────────────────────
+
+- id: "gs-bal-009"
+  query: "Show me my account balances in different currencies"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+- id: "gs-bal-010"
+  query: "How much buying power do I have left?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "guaranteed"
+    - "I recommend"
+
+- id: "gs-bal-011"
+  query: "What's the cash position in my Robinhood account?"
+  expected_tools:
+    - getAccountBalances
+  expected_sources:
+    - getAccountBalances
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "no information"

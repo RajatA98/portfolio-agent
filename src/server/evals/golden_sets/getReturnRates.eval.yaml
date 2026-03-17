@@ -1,0 +1,140 @@
+# Golden Set — getReturnRates
+# Tests return rates tool: brokerage-calculated returns by timeframe
+
+# ─── Happy Path ─────────────────────────────────────────────────────
+
+- id: "gs-rr-001"
+  query: "What are my return rates?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain:
+    - "return"
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "gs-rr-002"
+  query: "What is my 1-year return on my investments?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain:
+    - "return"
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "gs-rr-003"
+  query: "Show me my annual return rate"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain:
+    - "return"
+  must_not_contain:
+    - "I don't know"
+
+- id: "gs-rr-004"
+  query: "How have my investments performed over different time periods?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "gs-rr-005"
+  query: "What is my 3-month return?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+# ─── Comparison Queries ───────────────────────────────────────────
+
+- id: "gs-rr-006"
+  query: "Compare my 1-month vs 1-year returns"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+- id: "gs-rr-007"
+  query: "Is my portfolio doing better this year than last year?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+# ─── Ambiguous Queries ─────────────────────────────────────────────
+
+- id: "gs-rr-008"
+  query: "How am I doing overall with my investments?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+# ─── Edge Cases ────────────────────────────────────────────────────
+
+- id: "gs-rr-009"
+  query: "What's my all-time return percentage?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "guaranteed"
+    - "I recommend"
+
+- id: "gs-rr-010"
+  query: "Show me the time-weighted return rate for my account"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "no information"
+
+- id: "gs-rr-011"
+  query: "What was my return rate last month?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+
+- id: "gs-rr-012"
+  query: "What's the 6-month return on my portfolio?"
+  expected_tools:
+    - getReturnRates
+  expected_sources:
+    - getReturnRates
+  must_contain: []
+  must_not_contain:
+    - "I don't know"
+    - "no information"

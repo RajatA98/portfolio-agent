@@ -1,11 +1,14 @@
 import Big from 'big.js';
 
 import {
+  AccountBalancesResult,
   AllocationRow,
   HoldingRow,
   Money,
   PerformanceResult,
   PortfolioSnapshotResult,
+  ReturnRatesResult,
+  TransactionHistoryResult,
   ValuationMethod
 } from '../agent.types';
 import { fetchYahooQuote, toYahooSymbol } from '../lib/yahoo';
@@ -117,6 +120,14 @@ export class PortfolioService {
       : 'market';
     const now = new Date().toISOString().split('T')[0];
 
+    // Build price map for verifier computed-value matching
+    const priceMap: Record<string, number> = {};
+    for (const h of holdings) {
+      if (h.price?.amount != null) {
+        priceMap[h.symbol] = h.price.amount;
+      }
+    }
+
     const result: PortfolioSnapshotResult = {
       accountId: 'snaptrade',
       timeframe: { start: '', end: now },
@@ -126,7 +137,8 @@ export class PortfolioService {
       allocationBySymbol,
       allocationByAssetClass,
       holdings,
-      isPriceDataMissing
+      isPriceDataMissing,
+      priceMap
     };
 
     this.cache.set(userId, { data: result, ts: Date.now() });
@@ -173,6 +185,89 @@ export class PortfolioService {
       timeSeries: [],
       reasonIfUnavailable:
         'Historical time series is not available from brokerage data. Showing point-in-time gain/loss from cost basis vs current market value.'
+    };
+  }
+
+  async getTransactionHistory(
+    userId: string,
+    baseCurrency: string,
+    supabaseUserId?: string,
+    opts?: { startDate?: string; endDate?: string; type?: string; symbol?: string }
+  ): Promise<TransactionHistoryResult> {
+    const transactions = await this.brokerageService.getTransactions(
+      userId,
+      supabaseUserId ?? userId,
+      { startDate: opts?.startDate, endDate: opts?.endDate, type: opts?.type }
+    );
+
+    // Filter by symbol if requested
+    let filtered = transactions;
+    if (opts?.symbol) {
+      const sym = opts.symbol.toUpperCase();
+      filtered = transactions.filter((t) => t.symbol.toUpperCase() === sym);
+    }
+
+    return {
+      accountId: 'snaptrade',
+      transactions: filtered.map((t) => ({
+        date: t.date,
+        type: t.type,
+        symbol: t.symbol,
+        description: t.description,
+        quantity: t.quantity,
+        price: t.price != null ? { currency: t.currency, amount: t.price } : null,
+        amount: { currency: t.currency, amount: t.amount },
+        currency: t.currency,
+        accountName: t.accountName
+      })),
+      totalCount: filtered.length,
+      filters: {
+        startDate: opts?.startDate,
+        endDate: opts?.endDate,
+        type: opts?.type,
+        symbol: opts?.symbol
+      }
+    };
+  }
+
+  async getAccountBalances(
+    userId: string,
+    baseCurrency: string,
+    supabaseUserId?: string
+  ): Promise<AccountBalancesResult> {
+    const balances = await this.brokerageService.getBalances(userId, supabaseUserId ?? userId);
+
+    const totalCash = balances.reduce((sum, b) => sum + b.cash, 0);
+
+    return {
+      balances: balances.map((b) => ({
+        accountId: b.accountId,
+        accountName: b.accountName,
+        institutionName: b.institutionName,
+        currency: b.currency,
+        cash: b.cash,
+        buyingPower: b.buyingPower
+      })),
+      totalCash: { currency: baseCurrency, amount: totalCash },
+      asOf: new Date().toISOString().split('T')[0]
+    };
+  }
+
+  async getReturnRates(
+    userId: string,
+    baseCurrency: string,
+    supabaseUserId?: string
+  ): Promise<ReturnRatesResult> {
+    const rates = await this.brokerageService.getReturnRates(userId, supabaseUserId ?? userId);
+
+    return {
+      rates: rates.map((r) => ({
+        accountId: r.accountId,
+        accountName: r.accountName,
+        timeframe: r.timeframe,
+        returnPercent: r.returnPercent
+      })),
+      asOf: new Date().toISOString().split('T')[0]
     };
   }
 

@@ -7,6 +7,7 @@ import {
   AgentChatResponse,
   AgentLoopMeta,
   AllocationChange,
+  BrokerageService,
   PortfolioSnapshotResult,
   ToolTraceRow,
   ValuationMethod
@@ -15,9 +16,12 @@ import { computeConfidence, verifyAgentResponse } from './agent.verifier';
 import { createAnthropicClient, withLangfuseTrace } from './observability';
 import { SnapTradeService } from './services/snaptrade.service';
 import { PortfolioService } from './services/portfolio.service';
+import { GetAccountBalancesTool } from './tools/get-account-balances.tool';
 import { GetMarketPricesTool } from './tools/get-market-prices.tool';
 import { GetPerformanceTool } from './tools/get-performance.tool';
 import { GetPortfolioSnapshotTool } from './tools/get-portfolio-snapshot.tool';
+import { GetReturnRatesTool } from './tools/get-return-rates.tool';
+import { GetTransactionHistoryTool } from './tools/get-transaction-history.tool';
 import { SnapTradeConnectTool } from './tools/snaptrade-connect.tool';
 import { PortfolioReadTool } from './tools/portfolio-read.tool';
 import { SimulateAllocationChangeTool } from './tools/simulate-allocation-change.tool';
@@ -40,19 +44,27 @@ interface RunnableToolUse {
   input: unknown;
 }
 
+export interface AgentServiceDeps {
+  brokerageService?: BrokerageService;
+}
+
 export class AgentService {
   private readonly toolRegistry: ToolRegistry;
 
-  public constructor() {
+  public constructor(deps?: AgentServiceDeps) {
     this.toolRegistry = new ToolRegistry();
 
-    // Create shared services
-    const snapTradeService = agentConfig.enableSnapTrade ? new SnapTradeService() : null;
-    const portfolioService = snapTradeService
-      ? new PortfolioService(snapTradeService)
+    // Create shared services — use injected brokerage or default SnapTrade
+    const snapTradeService = deps?.brokerageService
+      ? null
+      : (agentConfig.enableSnapTrade ? new SnapTradeService() : null);
+
+    const brokerageService = deps?.brokerageService ?? snapTradeService;
+    const portfolioService = brokerageService
+      ? new PortfolioService(brokerageService)
       : null;
 
-    // --- Portfolio tools (require SnapTrade) ---
+    // --- Portfolio tools (require brokerage) ---
     if (portfolioService) {
       this.toolRegistry.register({
         definition: GetPortfolioSnapshotTool.DEFINITION,
@@ -75,6 +87,24 @@ export class AgentService {
       this.toolRegistry.register({
         definition: PortfolioReadTool.DEFINITION,
         executor: new PortfolioReadTool(portfolioService),
+        enabled: true
+      });
+
+      this.toolRegistry.register({
+        definition: GetTransactionHistoryTool.DEFINITION,
+        executor: new GetTransactionHistoryTool(portfolioService),
+        enabled: true
+      });
+
+      this.toolRegistry.register({
+        definition: GetAccountBalancesTool.DEFINITION,
+        executor: new GetAccountBalancesTool(portfolioService),
+        enabled: true
+      });
+
+      this.toolRegistry.register({
+        definition: GetReturnRatesTool.DEFINITION,
+        executor: new GetReturnRatesTool(portfolioService),
         enabled: true
       });
     }
@@ -491,6 +521,18 @@ export class AgentService {
       addTool('simulateAllocationChange', { changes });
     }
 
+    if (this.shouldUseTransactionHistory(lower)) {
+      addTool('getTransactionHistory', {});
+    }
+
+    if (this.shouldUseAccountBalances(lower)) {
+      addTool('getAccountBalances', {});
+    }
+
+    if (this.shouldUseReturnRates(lower)) {
+      addTool('getReturnRates', {});
+    }
+
     return synthetic;
   }
 
@@ -556,6 +598,41 @@ export class AgentService {
       return 'mtd';
     }
     return 'max';
+  }
+
+  private shouldUseTransactionHistory(lowerMessage: string): boolean {
+    return (
+      lowerMessage.includes('transaction') ||
+      lowerMessage.includes('dividend') ||
+      lowerMessage.includes('trade') ||
+      lowerMessage.includes('bought') ||
+      lowerMessage.includes('sold') ||
+      lowerMessage.includes('fee') ||
+      lowerMessage.includes('activity') ||
+      lowerMessage.includes('history of') ||
+      lowerMessage.includes('purchase history')
+    );
+  }
+
+  private shouldUseAccountBalances(lowerMessage: string): boolean {
+    return (
+      lowerMessage.includes('cash') ||
+      lowerMessage.includes('balance') ||
+      lowerMessage.includes('buying power') ||
+      lowerMessage.includes('available') ||
+      lowerMessage.includes('uninvested')
+    );
+  }
+
+  private shouldUseReturnRates(lowerMessage: string): boolean {
+    return (
+      lowerMessage.includes('return rate') ||
+      lowerMessage.includes('annual return') ||
+      lowerMessage.includes('1-year return') ||
+      lowerMessage.includes('one year return') ||
+      lowerMessage.includes('time-weighted') ||
+      lowerMessage.includes('twrr')
+    );
   }
 
   private parseAllocationChanges(

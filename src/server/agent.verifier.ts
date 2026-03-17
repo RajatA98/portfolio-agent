@@ -201,14 +201,34 @@ function checkSourceAttribution({
         break;
       }
 
-      // Fuzzy match: allow ±5% tolerance for live price fluctuations,
-      // floating-point artifacts, and computed values (price × quantity)
+      // Fuzzy match: allow ±5% tolerance (±10% for amounts under $100
+      // to accommodate per-share prices and small computed values)
+      const fuzzyThreshold = amount < 100 ? 0.10 : 0.05;
       const toolNums = allToolNumbers.get(toolName) ?? [];
       for (const toolVal of toolNums) {
-        if (Math.abs(toolVal - amount) / Math.max(toolVal, 1) < 0.05) {
+        if (Math.abs(toolVal - amount) / Math.max(toolVal, 1) < fuzzyThreshold) {
           found = true;
           source = toolName;
           break;
+        }
+      }
+      if (found) break;
+
+      // Computed value matching: try price × quantity combinations from holdings
+      const snapshot = toolResults.get('getPortfolioSnapshot') as
+        | PortfolioSnapshotResult
+        | undefined;
+      if (snapshot?.holdings) {
+        for (const h of snapshot.holdings) {
+          const price = h.price?.amount ?? (snapshot.priceMap?.[h.symbol]);
+          if (price && h.quantity > 0) {
+            const computedValue = price * h.quantity;
+            if (Math.abs(computedValue - amount) / Math.max(computedValue, 1) < fuzzyThreshold) {
+              found = true;
+              source = 'getPortfolioSnapshot (computed)';
+              break;
+            }
+          }
         }
       }
       if (found) break;

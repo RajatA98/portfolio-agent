@@ -256,6 +256,24 @@ export class SnapTradeService implements BrokerageService {
       const positions = holdingsRes.data.positions ?? [];
       console.log(`[snaptrade] account ${account.id} (${account.institution_name}): ${positions.length} positions`);
 
+      // Debug: log raw response fields to investigate staked/locked positions
+      if (process.env.SNAPTRADE_DEBUG === 'true') {
+        console.log(`[snaptrade:debug] raw holdings keys for ${account.id}:`, Object.keys(holdingsRes.data));
+        for (const pos of positions) {
+          const ticker = pos.symbol?.symbol?.symbol ?? 'UNKNOWN';
+          console.log(`[snaptrade:debug] position ${ticker}:`, JSON.stringify({
+            units: pos.units,
+            fractional_units: pos.fractional_units,
+            price: pos.price,
+            average_purchase_price: pos.average_purchase_price,
+            // Check for staking-related fields
+            ...(Object.keys(pos).filter(k => /stak|lock|earn|reward/i.test(k)).length > 0
+              ? { staking_fields: Object.keys(pos).filter(k => /stak|lock|earn|reward/i.test(k)) }
+              : {})
+          }));
+        }
+      }
+
       for (const pos of positions) {
         const units = pos.units ?? pos.fractional_units ?? 0;
         const ticker = pos.symbol?.symbol?.symbol ?? 'UNKNOWN';
@@ -287,35 +305,208 @@ export class SnapTradeService implements BrokerageService {
   }
 
   /**
-   * Get portfolio performance history from SnapTrade.
-   * Returns actual equity values over time from the brokerage.
+   * Get account activities (transactions) across all connected accounts.
    */
-  async getPerformanceHistory(
+  async getTransactions(
     userId: string,
     supabaseUserId: string,
-    startDate: string,
-    endDate: string,
-    frequency: 'daily' | 'weekly' | 'monthly' = 'daily'
-  ): Promise<Array<{ date: string; value: number }>> {
+    opts?: { startDate?: string; endDate?: string; type?: string }
+  ): Promise<Array<{
+    date: string;
+    type: string;
+    symbol: string;
+    description: string;
+    quantity: number | null;
+    price: number | null;
+    amount: number;
+    currency: string;
+    accountName: string;
+  }>> {
     const { snaptradeUserId, userSecret } = await this.getCredentials(userId, supabaseUserId);
 
-    const response = await this.client.transactionsAndReporting.getReportingCustomRange({
-      startDate,
-      endDate,
+    const accountsRes = await this.client.accountInformation.listUserAccounts({
       userId: snaptradeUserId,
-      userSecret,
-      frequency
+      userSecret
     });
+    const accounts = accountsRes.data ?? [];
 
-    const data = response.data;
-    const timeframe = data.totalEquityTimeframe ?? [];
+    const allTransactions: Array<{
+      date: string;
+      type: string;
+      symbol: string;
+      description: string;
+      quantity: number | null;
+      price: number | null;
+      amount: number;
+      currency: string;
+      accountName: string;
+    }> = [];
 
-    return timeframe
-      .filter((pt) => pt.date && pt.value != null)
-      .map((pt) => ({
-        date: pt.date!,
-        value: pt.value!
-      }));
+    for (const account of accounts) {
+      try {
+        const res = await this.client.accountInformation.getAccountActivities({
+          accountId: account.id,
+          userId: snaptradeUserId,
+          userSecret,
+          ...(opts?.startDate ? { startDate: opts.startDate } : {}),
+          ...(opts?.endDate ? { endDate: opts.endDate } : {}),
+          ...(opts?.type ? { type: opts.type } : {})
+        });
+
+        const activities = (res.data ?? []) as Array<{
+          trade_date?: string;
+          settlement_date?: string;
+          type?: string;
+          symbol?: { symbol?: { symbol?: string } };
+          description?: string;
+          units?: number;
+          price?: number;
+          amount?: number;
+          currency?: { code?: string };
+        }>;
+
+        for (const a of activities) {
+          allTransactions.push({
+            date: a.trade_date ?? a.settlement_date ?? '',
+            type: a.type ?? 'UNKNOWN',
+            symbol: a.symbol?.symbol?.symbol ?? '',
+            description: a.description ?? '',
+            quantity: a.units ?? null,
+            price: a.price ?? null,
+            amount: a.amount ?? 0,
+            currency: a.currency?.code ?? 'USD',
+            accountName: account.name ?? account.institution_name
+          });
+        }
+      } catch (err) {
+        console.error(`[snaptrade] getAccountActivities error for ${account.id}:`, SnapTradeService.sanitizeError(err));
+      }
+    }
+
+    // Sort by date descending
+    allTransactions.sort((a, b) => (b.date > a.date ? 1 : -1));
+    return allTransactions;
+  }
+
+  /**
+   * Get account balances (cash positions) across all connected accounts.
+   */
+  async getBalances(
+    userId: string,
+    supabaseUserId: string
+  ): Promise<Array<{
+    accountId: string;
+    accountName: string;
+    institutionName: string;
+    currency: string;
+    cash: number;
+    buyingPower: number | null;
+  }>> {
+    const { snaptradeUserId, userSecret } = await this.getCredentials(userId, supabaseUserId);
+
+    const accountsRes = await this.client.accountInformation.listUserAccounts({
+      userId: snaptradeUserId,
+      userSecret
+    });
+    const accounts = accountsRes.data ?? [];
+
+    const allBalances: Array<{
+      accountId: string;
+      accountName: string;
+      institutionName: string;
+      currency: string;
+      cash: number;
+      buyingPower: number | null;
+    }> = [];
+
+    for (const account of accounts) {
+      try {
+        const res = await this.client.accountInformation.getUserAccountBalance({
+          userId: snaptradeUserId,
+          userSecret,
+          accountId: account.id
+        });
+
+        const balances = (res.data ?? []) as Array<{
+          currency?: { code?: string };
+          cash?: number;
+          buying_power?: number;
+        }>;
+
+        for (const b of balances) {
+          allBalances.push({
+            accountId: account.id,
+            accountName: account.name ?? account.institution_name,
+            institutionName: account.institution_name,
+            currency: b.currency?.code ?? 'USD',
+            cash: b.cash ?? 0,
+            buyingPower: b.buying_power ?? null
+          });
+        }
+      } catch (err) {
+        console.error(`[snaptrade] getUserAccountBalance error for ${account.id}:`, SnapTradeService.sanitizeError(err));
+      }
+    }
+
+    return allBalances;
+  }
+
+  /**
+   * Get brokerage-calculated return rates by timeframe for all accounts.
+   */
+  async getReturnRates(
+    userId: string,
+    supabaseUserId: string
+  ): Promise<Array<{
+    accountId: string;
+    accountName: string;
+    timeframe: string;
+    returnPercent: number;
+  }>> {
+    const { snaptradeUserId, userSecret } = await this.getCredentials(userId, supabaseUserId);
+
+    const accountsRes = await this.client.accountInformation.listUserAccounts({
+      userId: snaptradeUserId,
+      userSecret
+    });
+    const accounts = accountsRes.data ?? [];
+
+    const allRates: Array<{
+      accountId: string;
+      accountName: string;
+      timeframe: string;
+      returnPercent: number;
+    }> = [];
+
+    for (const account of accounts) {
+      try {
+        const res = await this.client.accountInformation.getUserAccountReturnRates({
+          userId: snaptradeUserId,
+          userSecret,
+          accountId: account.id
+        });
+
+        const rates = (res.data ?? []) as Array<{
+          timeframe?: string;
+          return_percent?: number;
+        }>;
+
+        for (const r of rates) {
+          if (r.timeframe && r.return_percent != null) {
+            allRates.push({
+              accountId: account.id,
+              accountName: account.name ?? account.institution_name,
+              timeframe: r.timeframe,
+              returnPercent: r.return_percent
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`[snaptrade] getUserAccountReturnRates error for ${account.id}:`, SnapTradeService.sanitizeError(err));
+      }
+    }
+
+    return allRates;
   }
 
   /**

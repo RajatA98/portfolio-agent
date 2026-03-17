@@ -39,6 +39,15 @@ if [[ -z "$ANTHROPIC_API_KEY" || -z "$SUPABASE_URL" || -z "$SUPABASE_ANON_KEY" |
   exit 1
 fi
 
+# Optional env vars — only included if set in .env
+STRIPE_SECRET_KEY=$(read_var STRIPE_SECRET_KEY)
+STRIPE_WEBHOOK_SECRET=$(read_var STRIPE_WEBHOOK_SECRET)
+STRIPE_PRICE_ID_PRO=$(read_var STRIPE_PRICE_ID_PRO)
+SNAPTRADE_CLIENT_ID=$(read_var SNAPTRADE_CLIENT_ID)
+SNAPTRADE_CONSUMER_KEY=$(read_var SNAPTRADE_CONSUMER_KEY)
+SUPABASE_SERVICE_ROLE_KEY=$(read_var SUPABASE_SERVICE_ROLE_KEY)
+FREE_TIER_DAILY_TOKEN_LIMIT=$(read_var FREE_TIER_DAILY_TOKEN_LIMIT)
+
 # CORS_ORIGIN: use from .env or placeholder; update in console after first deploy to service URL
 if [[ -z "$CORS_ORIGIN" ]]; then
   CORS_ORIGIN="http://localhost:5179"
@@ -57,6 +66,22 @@ ENCRYPTION_KEY: "$(echo "$ENCRYPTION_KEY" | sed 's/"/\\"/g')"
 ENCRYPTION_SALT: "$(echo "$ENCRYPTION_SALT" | sed 's/"/\\"/g')"
 CORS_ORIGIN: "$(echo "$CORS_ORIGIN" | sed 's/"/\\"/g')"
 EOF
+
+# Append optional env vars only if set
+add_optional_var() {
+  local name="$1" value="$2"
+  if [[ -n "$value" ]]; then
+    echo "${name}: \"$(echo "$value" | sed 's/"/\\"/g')\"" >> "$ENV_FILE"
+  fi
+}
+
+add_optional_var STRIPE_SECRET_KEY "$STRIPE_SECRET_KEY"
+add_optional_var STRIPE_WEBHOOK_SECRET "$STRIPE_WEBHOOK_SECRET"
+add_optional_var STRIPE_PRICE_ID_PRO "$STRIPE_PRICE_ID_PRO"
+add_optional_var SNAPTRADE_CLIENT_ID "$SNAPTRADE_CLIENT_ID"
+add_optional_var SNAPTRADE_CONSUMER_KEY "$SNAPTRADE_CONSUMER_KEY"
+add_optional_var SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+add_optional_var FREE_TIER_DAILY_TOKEN_LIMIT "$FREE_TIER_DAILY_TOKEN_LIMIT"
 
 echo "Deploying to Cloud Run (project=$PROJECT_ID, image=$IMAGE)..."
 gcloud run deploy portfolio-agent \

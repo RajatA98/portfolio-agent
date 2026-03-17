@@ -97,9 +97,6 @@ const allocationCanvas = document.getElementById('allocationChart') as HTMLCanva
 const allocationLegend = document.getElementById('allocationLegend') as HTMLDivElement;
 const performanceValue = document.getElementById('performanceValue') as HTMLDivElement;
 const performanceLabel = document.getElementById('performanceLabel') as HTMLDivElement;
-const performanceCanvas = document.getElementById('performanceChart') as HTMLCanvasElement;
-const historyCanvas = document.getElementById('historyChart') as HTMLCanvasElement;
-const periodSelector = document.getElementById('periodSelector') as HTMLDivElement;
 const holdingsTableEl = document.getElementById('holdingsTable') as HTMLDivElement;
 
 // Privacy toggle
@@ -387,9 +384,6 @@ privacyToggle.addEventListener('click', () => {
   // Re-render dashboard with current holdings
   if (lastHoldings) {
     renderDashboard(lastHoldings);
-    // Re-render history chart with current period
-    const activeBtn = periodSelector.querySelector('.periodBtn.active') as HTMLButtonElement | null;
-    void loadHistoryChart(activeBtn?.dataset.range ?? '1mo');
   }
 });
 
@@ -552,9 +546,6 @@ async function loadDashboard(): Promise<void> {
     if (data.holdings && data.holdings.length > 0) {
       dashboardPanel.style.display = '';
       renderDashboard(data.holdings);
-      // Load history chart with default period
-      const activeBtn = periodSelector.querySelector('.periodBtn.active') as HTMLButtonElement | null;
-      void loadHistoryChart(activeBtn?.dataset.range ?? '1mo');
     }
   } catch {
     // Non-fatal
@@ -602,9 +593,6 @@ function renderDashboard(
 
   // Allocation donut chart
   renderDonutChart(holdings, total);
-
-  // Performance bar chart (gain/loss per holding)
-  renderPerformanceChart(holdings);
 
   // Holdings table
   renderHoldingsTable(holdings);
@@ -675,227 +663,6 @@ function renderDonutChart(
   allocationLegend.innerHTML = legendItems.join('');
 }
 
-function renderPerformanceChart(
-  holdings: Array<{
-    symbol: string;
-    costBasis: number | null;
-    currentValue: number | null;
-  }>
-): void {
-  const ctx = performanceCanvas.getContext('2d');
-  if (!ctx) return;
-
-  // Compute gain/loss per holding
-  const data = holdings
-    .filter((h) => h.costBasis != null && h.costBasis > 0 && h.currentValue != null)
-    .map((h) => ({
-      symbol: h.symbol,
-      gain: (h.currentValue! - h.costBasis!) / h.costBasis! * 100
-    }))
-    .sort((a, b) => b.gain - a.gain);
-
-  if (data.length === 0) {
-    performanceCanvas.style.display = 'none';
-    return;
-  }
-  performanceCanvas.style.display = 'block';
-
-  const dpr = window.devicePixelRatio || 1;
-  const W = 320;
-  const H = Math.max(160, data.length * 28 + 20);
-  performanceCanvas.width = W * dpr;
-  performanceCanvas.height = H * dpr;
-  performanceCanvas.style.width = `${W}px`;
-  performanceCanvas.style.height = `${H}px`;
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, W, H);
-
-  const labelW = 50;
-  const chartW = W - labelW - 40;
-  const barH = 16;
-  const gap = 8;
-  const maxAbs = Math.max(...data.map((d) => Math.abs(d.gain)), 1);
-  const centerX = labelW + chartW / 2;
-
-  for (let i = 0; i < data.length; i++) {
-    const d = data[i];
-    const y = 10 + i * (barH + gap);
-    const barWidth = (d.gain / maxAbs) * (chartW / 2);
-
-    // Symbol label
-    ctx.fillStyle = '#888';
-    ctx.font = '11px "SF Mono", monospace';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(d.symbol, labelW - 6, y + barH / 2);
-
-    // Bar
-    const isPositive = d.gain >= 0;
-    ctx.fillStyle = isPositive ? '#33ff33' : '#ff3333';
-    if (isPositive) {
-      ctx.fillRect(centerX, y, barWidth, barH);
-    } else {
-      ctx.fillRect(centerX + barWidth, y, -barWidth, barH);
-    }
-
-    // Percentage label
-    ctx.fillStyle = isPositive ? '#33ff33' : '#ff3333';
-    ctx.font = '10px "SF Mono", monospace';
-    ctx.textAlign = isPositive ? 'left' : 'right';
-    const labelX = isPositive ? centerX + barWidth + 4 : centerX + barWidth - 4;
-    ctx.fillText(`${d.gain >= 0 ? '+' : ''}${d.gain.toFixed(1)}%`, labelX, y + barH / 2);
-  }
-
-  // Center line (zero axis)
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(centerX, 4);
-  ctx.lineTo(centerX, H - 4);
-  ctx.stroke();
-}
-
-// ── Portfolio History Line Chart ──
-
-async function loadHistoryChart(range = '1mo'): Promise<void> {
-  const token = getAccessToken();
-  if (!token) return;
-
-  try {
-    const res = await fetch(apiUrl(`/api/snaptrade/history?range=${range}`), {
-      headers: authHeaders()
-    });
-    if (!res.ok) return;
-
-    const data = (await res.json()) as {
-      history: Array<{ date: string; value: number }>;
-    };
-
-    if (data.history && data.history.length > 1) {
-      renderHistoryChart(data.history);
-    }
-  } catch {
-    // Non-fatal
-  }
-}
-
-function renderHistoryChart(
-  history: Array<{ date: string; value: number }>
-): void {
-  const ctx = historyCanvas.getContext('2d');
-  if (!ctx || history.length < 2) return;
-
-  const dpr = window.devicePixelRatio || 1;
-  const W = historyCanvas.parentElement?.clientWidth ?? 320;
-  const H = 160;
-  historyCanvas.width = W * dpr;
-  historyCanvas.height = H * dpr;
-  historyCanvas.style.width = `${W}px`;
-  historyCanvas.style.height = `${H}px`;
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, W, H);
-
-  const padL = 8;
-  const padR = 8;
-  const padT = 12;
-  const padB = 24;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-
-  const values = history.map((h) => h.value);
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
-  const valRange = maxVal - minVal || 1;
-
-  const firstVal = values[0];
-  const lastVal = values[values.length - 1];
-  const isPositive = lastVal >= firstVal;
-  const lineColor = isPositive ? '#33ff33' : '#ff3333';
-
-  // Draw line
-  ctx.beginPath();
-  for (let i = 0; i < history.length; i++) {
-    const x = padL + (i / (history.length - 1)) * chartW;
-    const y = padT + (1 - (values[i] - minVal) / valRange) * chartH;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.strokeStyle = lineColor;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Fill gradient below line
-  const lastX = padL + chartW;
-  const lastY = padT + (1 - (lastVal - minVal) / valRange) * chartH;
-  ctx.lineTo(lastX, padT + chartH);
-  ctx.lineTo(padL, padT + chartH);
-  ctx.closePath();
-  const gradient = ctx.createLinearGradient(0, padT, 0, padT + chartH);
-  gradient.addColorStop(0, isPositive ? 'rgba(51,255,51,0.15)' : 'rgba(255,51,51,0.15)');
-  gradient.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = gradient;
-  ctx.fill();
-
-  // Current value dot
-  ctx.beginPath();
-  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
-  ctx.fillStyle = lineColor;
-  ctx.fill();
-
-  // Date labels (first and last)
-  ctx.fillStyle = '#555';
-  ctx.font = '9px "SF Mono", monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText(formatDateLabel(history[0].date), padL, H - 4);
-  ctx.textAlign = 'right';
-  ctx.fillText(formatDateLabel(history[history.length - 1].date), W - padR, H - 4);
-
-  // Value range labels
-  ctx.fillStyle = '#444';
-  ctx.textAlign = 'right';
-  if (!privacyMode) {
-    ctx.fillText(`$${maxVal.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, W - padR, padT + 8);
-    ctx.fillText(`$${minVal.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, W - padR, padT + chartH - 2);
-  }
-
-  // Change label
-  const changePct = ((lastVal - firstVal) / firstVal * 100);
-  const changeAmt = lastVal - firstVal;
-  ctx.fillStyle = lineColor;
-  ctx.font = '10px "SF Mono", monospace';
-  ctx.textAlign = 'left';
-  if (privacyMode) {
-    ctx.fillText(
-      `${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%`,
-      padL,
-      padT + 8
-    );
-  } else {
-    ctx.fillText(
-      `${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% ($${changeAmt >= 0 ? '+' : ''}${changeAmt.toLocaleString('en-US', { maximumFractionDigits: 0 })})`,
-      padL,
-      padT + 8
-    );
-  }
-}
-
-function formatDateLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
-}
-
-// Period selector event
-periodSelector.addEventListener('click', (e) => {
-  const btn = (e.target as HTMLElement).closest('.periodBtn') as HTMLButtonElement | null;
-  if (!btn) return;
-  const range = btn.dataset.range ?? '3mo';
-
-  // Update active state
-  periodSelector.querySelectorAll('.periodBtn').forEach((b) => b.classList.remove('active'));
-  btn.classList.add('active');
-
-  void loadHistoryChart(range);
-});
 
 function renderHoldingsTable(
   holdings: Array<{
