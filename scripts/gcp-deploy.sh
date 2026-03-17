@@ -23,7 +23,7 @@ fi
 
 IMAGE="${IMAGE:-us-central1-docker.pkg.dev/${PROJECT_ID}/portfolio-agent/agent:latest}"
 REGION="${REGION:-us-central1}"
-SERVICE_NAME="${SERVICE_NAME:-portfolio-agent}"
+SERVICE_NAME="${SERVICE_NAME:-portfolio-agent-git}"
 
 # Required for Cloud Run
 ANTHROPIC_API_KEY=$(read_var ANTHROPIC_API_KEY)
