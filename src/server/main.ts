@@ -427,6 +427,68 @@ if (agentConfig.enableSnapTrade) {
     }
   });
 
+  // --- Verify accounts after connection (duplicate detection) ---
+  app.post('/api/snaptrade/verify-accounts', async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.userId!;
+    const supabaseUserId = authReq.supabaseUserId!;
+    const prisma = getPrisma();
+
+    try {
+      const accounts = await snapTradeService.listAccounts(userId, supabaseUserId);
+
+      if (accounts.length === 0) {
+        res.json({ ok: true });
+        return;
+      }
+
+      // Check if any account is already linked to a different user
+      for (const account of accounts) {
+        const existing = await prisma.linkedAccount.findUnique({
+          where: { brokerageAccountId: account.id },
+          include: { user: { select: { id: true, email: true } } }
+        });
+
+        if (existing && existing.userId !== userId) {
+          // Duplicate detected — remove the SnapTrade connection for this user
+          console.log(`[snaptrade] duplicate account detected: ${account.id} (${account.institutionName}) already linked to user ${existing.userId}`);
+
+          // Delete the brokerage connection so this user can't access the other user's data
+          await snapTradeService.deleteConnection(userId);
+
+          res.status(409).json({
+            error: 'duplicate_account',
+            message: `This brokerage account (${account.institutionName}) is already connected to a different Portfolio Terminal account. Each brokerage account can only be linked to one account.`
+          });
+          return;
+        }
+      }
+
+      // No duplicates — register all accounts for this user
+      for (const account of accounts) {
+        await prisma.linkedAccount.upsert({
+          where: { brokerageAccountId: account.id },
+          create: {
+            userId,
+            brokerageAccountId: account.id,
+            institutionName: account.institutionName,
+            accountName: account.name
+          },
+          update: {
+            userId,
+            institutionName: account.institutionName,
+            accountName: account.name
+          }
+        });
+      }
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('[snaptrade/verify-accounts] error:', SnapTradeService.sanitizeError(error));
+      res.status(500).json({ error: SnapTradeService.sanitizeError(error) });
+    }
+  });
+
   app.get('/api/snaptrade/holdings', async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;

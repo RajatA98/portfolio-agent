@@ -19,6 +19,7 @@ model User {
   updatedAt           DateTime  @updatedAt
 
   brokerageConnections BrokerageConnection[]
+  linkedAccounts       LinkedAccount[]
   usage                Usage[]
 
   @@index([supabaseUserId])
@@ -52,5 +53,19 @@ model BrokerageConnection {
   user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, snaptradeUserId])
+  @@index([userId])
+}
+
+model LinkedAccount {
+  id                  String   @id @default(uuid())
+  userId              String
+  brokerageAccountId  String   // external account ID from brokerage (unique per real account)
+  institutionName     String?
+  accountName         String?
+  createdAt           DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([brokerageAccountId])
   @@index([userId])
 }

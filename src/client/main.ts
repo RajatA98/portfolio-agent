@@ -485,15 +485,37 @@ async function openSnapTradeConnect(): Promise<void> {
     }
     brokerageStatus.textContent = 'CONNECTING...';
 
+    // After connection, verify accounts (duplicate detection) then sync
+    const onConnected = async () => {
+      brokerageStatus.textContent = 'VERIFYING...';
+      try {
+        const verifyRes = await fetch(apiUrl('/api/snaptrade/verify-accounts'), {
+          method: 'POST',
+          headers: authHeaders()
+        });
+        if (!verifyRes.ok) {
+          const data = (await verifyRes.json().catch(() => ({}))) as { error?: string; message?: string };
+          if (data.error === 'duplicate_account') {
+            brokerageStatus.textContent = '';
+            alert(data.message ?? 'This brokerage account is already connected to a different account.');
+            void checkBrokerageStatus();
+            return;
+          }
+        }
+      } catch {
+        // Non-fatal — proceed with sync
+      }
+      brokerageStatus.textContent = 'SYNCING...';
+      await checkBrokerageStatus();
+      void loadDashboard();
+      brokerageStatus.textContent = '';
+    };
+
     // Listen for postMessage from callback page OR poll for popup close
     const onMessage = (event: MessageEvent) => {
       if (event.data === 'snaptrade-connected') {
         cleanup();
-        brokerageStatus.textContent = 'SYNCING...';
-        void checkBrokerageStatus().then(() => {
-          void loadDashboard();
-          brokerageStatus.textContent = '';
-        });
+        void onConnected();
       }
     };
     window.addEventListener('message', onMessage);
@@ -501,11 +523,7 @@ async function openSnapTradeConnect(): Promise<void> {
     const pollInterval = setInterval(() => {
       if (popup && popup.closed) {
         cleanup();
-        brokerageStatus.textContent = 'SYNCING...';
-        void checkBrokerageStatus().then(() => {
-          void loadDashboard();
-          brokerageStatus.textContent = '';
-        });
+        void onConnected();
       }
     }, 1000);
 
