@@ -1361,7 +1361,7 @@ async function showUpgradePrompt(): Promise<void> {
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (data.url) {
-        window.location.href = data.url;
+        window.open(data.url, '_blank');
       } else {
         history.appendAssistantMessage(`Upgrade failed: ${data.error ?? 'unknown error'}`);
         render();
@@ -1449,7 +1449,7 @@ function toggleProfilePanel(): void {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
         });
         const data = (await res.json()) as { url?: string };
-        if (data.url) window.location.href = data.url;
+        if (data.url) window.open(data.url, '_blank');
       } catch { /* ignore */ }
     });
   });
