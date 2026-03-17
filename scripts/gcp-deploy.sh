@@ -23,6 +23,7 @@ fi
 
 IMAGE="${IMAGE:-us-central1-docker.pkg.dev/${PROJECT_ID}/portfolio-agent/agent:latest}"
 REGION="${REGION:-us-central1}"
+SERVICE_NAME="${SERVICE_NAME:-portfolio-agent}"
 
 # Required for Cloud Run
 ANTHROPIC_API_KEY=$(read_var ANTHROPIC_API_KEY)
@@ -43,6 +44,10 @@ fi
 STRIPE_SECRET_KEY=$(read_var STRIPE_SECRET_KEY)
 STRIPE_WEBHOOK_SECRET=$(read_var STRIPE_WEBHOOK_SECRET)
 STRIPE_PRICE_ID_PRO=$(read_var STRIPE_PRICE_ID_PRO)
+# Also check alternate name used in some .env files
+if [[ -z "$STRIPE_PRICE_ID_PRO" ]]; then
+  STRIPE_PRICE_ID_PRO=$(read_var STRIPE_PRO_PRICE_ID)
+fi
 SNAPTRADE_CLIENT_ID=$(read_var SNAPTRADE_CLIENT_ID)
 SNAPTRADE_CONSUMER_KEY=$(read_var SNAPTRADE_CONSUMER_KEY)
 SUPABASE_SERVICE_ROLE_KEY=$(read_var SUPABASE_SERVICE_ROLE_KEY)
@@ -84,7 +89,7 @@ add_optional_var SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
 add_optional_var FREE_TIER_DAILY_TOKEN_LIMIT "$FREE_TIER_DAILY_TOKEN_LIMIT"
 
 echo "Deploying to Cloud Run (project=$PROJECT_ID, image=$IMAGE)..."
-gcloud run deploy portfolio-agent \
+gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE" \
   --region "$REGION" \
   --platform managed \
@@ -93,7 +98,7 @@ gcloud run deploy portfolio-agent \
 
 echo ""
 echo "Done. Service URL:"
-gcloud run services describe portfolio-agent --region "$REGION" --format 'value(status.url)'
+gcloud run services describe "$SERVICE_NAME" --region "$REGION" --format 'value(status.url)'
 echo ""
 echo "If this was the first deploy, set CORS_ORIGIN in Cloud Run to the URL above (Variables & secrets)."
 echo "Then run migrations once: npx prisma migrate deploy (using same DATABASE_URL/DIRECT_URL as Cloud Run)."
