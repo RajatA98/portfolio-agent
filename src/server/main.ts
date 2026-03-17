@@ -8,6 +8,7 @@ import Stripe from 'stripe';
 
 import { agentConfig } from './agent.config';
 import { AgentService, StreamEvent } from './agent.service';
+import { ChatService, type ChatMessagePayload } from './services/chat.service';
 import { AgentChatRequest } from './agent.types';
 import { getPrisma } from './lib/prisma';
 import { AuthenticatedRequest, requireAuth } from './middleware/auth';
@@ -147,6 +148,102 @@ app.get('/api/profile', async (req, res) => {
     });
   } catch {
     res.status(500).json({ error: 'Failed to load profile' });
+  }
+});
+
+// --- Encrypted Chat Persistence ---
+const chatService = new ChatService();
+
+app.get('/api/chats', async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    const chats = await chatService.listChats(authReq.userId!);
+    res.json({ chats });
+  } catch {
+    res.status(500).json({ error: 'Failed to load chats' });
+  }
+});
+
+app.post('/api/chats', async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    const { title } = req.body as { title?: string };
+    const chat = await chatService.createChat(authReq.userId!, title);
+    res.json(chat);
+  } catch {
+    res.status(500).json({ error: 'Failed to create chat' });
+  }
+});
+
+app.delete('/api/chats/:chatId', async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    await chatService.deleteChat(authReq.userId!, req.params.chatId);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete chat' });
+  }
+});
+
+app.patch('/api/chats/:chatId', async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const { title } = req.body as { title?: string };
+  if (!title) { res.status(400).json({ error: 'title required' }); return; }
+  try {
+    await chatService.renameChat(authReq.userId!, req.params.chatId, title);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to rename chat' });
+  }
+});
+
+app.get('/api/chats/:chatId/messages', async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    const messages = await chatService.getMessages(
+      authReq.userId!, authReq.supabaseUserId!, req.params.chatId
+    );
+    res.json({ messages });
+  } catch {
+    res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+app.post('/api/chats/:chatId/messages', async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    const msg = req.body as { role: string; content: string; confidence?: number; warnings?: string[] };
+    await chatService.appendMessage(
+      authReq.userId!, authReq.supabaseUserId!, req.params.chatId,
+      { role: msg.role as 'user' | 'assistant', content: msg.content, confidence: msg.confidence, warnings: msg.warnings }
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to save message' });
+  }
+});
+
+app.post('/api/chats/sync', async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    const raw = req.body as { chats: Array<{ title: string; createdAt?: number; messages?: Array<{ role: string; content: string; confidence?: number; warnings?: string[] }> }> };
+    const chats = raw.chats.map((c) => ({
+      title: c.title,
+      createdAt: c.createdAt,
+      messages: (c.messages ?? []).map((m): ChatMessagePayload => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+        confidence: m.confidence,
+        warnings: m.warnings
+      }))
+    }));
+    const results = await chatService.bulkSync(
+      authReq.userId!, authReq.supabaseUserId!, chats
+    );
+    res.json({ results });
+  } catch (error) {
+    console.error('[chat/sync] error:', error);
+    res.status(500).json({ error: 'Failed to sync chats' });
   }
 });
 

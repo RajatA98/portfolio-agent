@@ -54,7 +54,10 @@ type AgentStreamEvent =
     }
   | { type: 'error'; message: string };
 
-let history = new AgentChatHistoryService();
+let history = new AgentChatHistoryService(undefined, {
+  baseUrl: API_BASE,
+  getToken: () => getAccessToken()
+});
 
 // DOM elements
 const messagesEl = document.getElementById('messages') as HTMLDivElement;
@@ -166,9 +169,18 @@ function updateAuthUI(): void {
 }
 
 function initHistoryForUser(userId?: string): void {
-  history = new AgentChatHistoryService(userId);
-  renderChatList();
-  render();
+  history = new AgentChatHistoryService(userId, {
+    baseUrl: API_BASE,
+    getToken: () => getAccessToken()
+  });
+  // Try loading from server (encrypted persistence), then render
+  history.loadFromServer().then(() => {
+    renderChatList();
+    render();
+  }).catch(() => {
+    renderChatList();
+    render();
+  });
 }
 
 function renderChatList(): void {
@@ -186,8 +198,8 @@ function renderChatList(): void {
     .join('');
 }
 
-function switchToChat(chatId: string): void {
-  history.switchChat(chatId);
+async function switchToChat(chatId: string): Promise<void> {
+  await history.switchChat(chatId);
   renderChatList();
   render();
 }
@@ -350,10 +362,11 @@ connectBrokerageBtn.addEventListener('click', () => void openSnapTradeConnect())
 
 // Chat sidebar events
 newChatBtn.addEventListener('click', () => {
-  history.newChat();
-  renderChatList();
-  render();
-  messageInput.focus();
+  void history.newChat().then(() => {
+    renderChatList();
+    render();
+    messageInput.focus();
+  });
 });
 
 chatListEl.addEventListener('click', (e) => {
@@ -362,9 +375,10 @@ chatListEl.addEventListener('click', (e) => {
     e.stopPropagation();
     const deleteId = deleteBtn.dataset.deleteId;
     if (deleteId) {
-      history.deleteChat(deleteId);
-      renderChatList();
-      render();
+      void history.deleteChat(deleteId).then(() => {
+        renderChatList();
+        render();
+      });
     }
     return;
   }
@@ -879,7 +893,7 @@ async function sendMessage(): Promise<void> {
 
   // If user switched chats while agent was working, switch back to show the response
   if (history.getCurrentChatId() !== activeChatId) {
-    history.switchChat(activeChatId);
+    await history.switchChat(activeChatId);
     renderChatList();
   }
   render();
