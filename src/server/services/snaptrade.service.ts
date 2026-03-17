@@ -112,13 +112,31 @@ export class SnapTradeService implements BrokerageService {
       const snaptradeUserId = existingUsers[0] as string;
 
       // Reset user secret to get a fresh one (preserves brokerage connections)
-      const resetRes = await this.client.authentication.resetSnapTradeUserSecret({
-        userId: snaptradeUserId,
-        userSecret: '' // pass empty — SnapTrade generates a new secret
-      });
-      const newSecret = (resetRes.data as { userSecret?: string })?.userSecret ?? '';
-      if (!newSecret) throw new Error('Failed to obtain SnapTrade credentials. Please try again.');
-      return { snaptradeUserId, userSecret: newSecret };
+      try {
+        const resetRes = await this.client.authentication.resetSnapTradeUserSecret({
+          userId: snaptradeUserId,
+          userSecret: '' // pass empty — SnapTrade generates a new secret
+        });
+        const newSecret = (resetRes.data as { userSecret?: string })?.userSecret ?? '';
+        if (!newSecret) throw new Error('Reset returned empty secret');
+        return { snaptradeUserId, userSecret: newSecret };
+      } catch (resetError) {
+        // Reset failed (e.g. no current secret available) — delete and re-register
+        console.log('[snaptrade] secret reset failed, deleting SnapTrade user and re-registering');
+        try {
+          await this.client.authentication.deleteSnapTradeUser({ userId: snaptradeUserId });
+        } catch (delErr) {
+          console.log('[snaptrade] delete user failed (may already be gone):', String(delErr).slice(0, 100));
+        }
+        // Re-register fresh
+        const freshRes = await this.client.authentication.registerSnapTradeUser({ userId });
+        const freshSecret = freshRes.data.userSecret ?? '';
+        if (!freshSecret) throw new Error('Failed to obtain SnapTrade credentials after re-registration.');
+        return {
+          snaptradeUserId: freshRes.data.userId ?? userId,
+          userSecret: freshSecret
+        };
+      }
     }
   }
 
