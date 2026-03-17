@@ -25,6 +25,7 @@ steps:
     id: build
     args:
       - 'build'
+      - '--no-cache'
       - '--build-arg'
       - 'VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}'
       - '--build-arg'
