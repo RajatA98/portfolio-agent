@@ -1227,3 +1227,118 @@ button {
     max-height: 50vh;
   }
 }
+
+/* ── Profile Panel ── */
+.headerProfileBtn {
+  background: none;
+  border: 1px solid #333;
+  color: #ff6600;
+  padding: 2px 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+.headerProfileBtn:hover {
+  background: #1a1a1a;
+  border-color: #ff6600;
+}
+
+.profilePanel {
+  position: fixed;
+  top: 40px;
+  right: 16px;
+  width: 300px;
+  background: #111;
+  border: 1px solid #333;
+  padding: 16px;
+  z-index: 200;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+
+.profileHeader {
+  color: #ff6600;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.profileSection {
+  margin-bottom: 14px;
+}
+
+.profileLabel {
+  color: #666;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.profileItem {
+  color: #c8c8c8;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.profileItem.dimmed {
+  color: #555;
+  font-style: italic;
+}
+
+.profileCloseBtn {
+  width: 100%;
+  background: none;
+  border: 1px solid #333;
+  color: #888;
+  padding: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+.profileCloseBtn:hover {
+  border-color: #ff6600;
+  color: #ff6600;
+}
+
+.profileLoading {
+  color: #555;
+  font-size: 11px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ── Upgrade Bar ── */
+.upgradeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1a1000;
+  border: 1px solid #ff6600;
+  padding: 8px 12px;
+  margin: 0 8px 4px 8px;
+  font-size: 11px;
+  color: #ff6600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.upgradeBtn {
+  background: #ff6600;
+  color: #000;
+  border: none;
+  padding: 6px 14px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.upgradeBtn:hover {
+  background: #ff8533;
+}

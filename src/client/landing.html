@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio Agent - AI Portfolio Intelligence</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: #0a0a0a;
+        color: #c8c8c8;
+        font-family: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      /* ── Nav ── */
+      .nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 40px;
+        border-bottom: 1px solid #1a1a1a;
+      }
+      .navBrand {
+        color: #ff6600;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+      }
+      .navLinks { display: flex; gap: 24px; align-items: center; }
+      .navLinks a {
+        color: #888;
+        text-decoration: none;
+        font-size: 11px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        transition: color 0.2s;
+      }
+      .navLinks a:hover { color: #ff6600; }
+      .navCta {
+        background: #ff6600;
+        color: #000;
+        padding: 8px 20px;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        transition: background 0.2s;
+      }
+      .navCta:hover { background: #ff8533; }
+
+      /* ── Hero ── */
+      .hero {
+        text-align: center;
+        padding: 100px 40px 60px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .heroTag {
+        color: #ff6600;
+        font-size: 11px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-bottom: 24px;
+      }
+      .heroTitle {
+        font-size: 42px;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.2;
+        margin-bottom: 20px;
+      }
+      .heroTitle span { color: #ff6600; }
+      .heroSub {
+        color: #888;
+        font-size: 15px;
+        max-width: 560px;
+        margin: 0 auto 40px;
+        line-height: 1.7;
+      }
+      .heroCtas {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .ctaPrimary {
+        background: #ff6600;
+        color: #000;
+        padding: 14px 32px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        transition: background 0.2s;
+      }
+      .ctaPrimary:hover { background: #ff8533; }
+      .ctaSecondary {
+        border: 1px solid #333;
+        color: #c8c8c8;
+        padding: 14px 32px;
+        text-decoration: none;
+        font-size: 13px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        transition: all 0.2s;
+      }
+      .ctaSecondary:hover { border-color: #ff6600; color: #ff6600; }
+
+      /* ── Terminal Preview ── */
+      .terminalPreview {
+        max-width: 760px;
+        margin: 40px auto 0;
+        background: #111;
+        border: 1px solid #222;
+        padding: 0;
+        overflow: hidden;
+      }
+      .termBar {
+        background: #1a1a1a;
+        padding: 8px 14px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .termDot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #333;
+      }
+      .termDot.r { background: #ff5f57; }
+      .termDot.y { background: #febc2e; }
+      .termDot.g { background: #28c840; }
+      .termBody {
+        padding: 20px;
+        font-size: 12px;
+        line-height: 1.8;
+      }
+      .termLine { margin-bottom: 4px; }
+      .termPrompt { color: #ff6600; }
+      .termCmd { color: #fff; }
+      .termOut { color: #888; }
+      .termTool { color: #33ff33; }
+      .termWarn { color: #ff6600; }
+      .termVal { color: #5af; }
+
+      /* ── Features ── */
+      .features {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 80px 40px;
+      }
+      .featuresTitle {
+        text-align: center;
+        color: #ff6600;
+        font-size: 11px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-bottom: 48px;
+      }
+      .featureGrid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+      }
+      .featureCard {
+        background: #111;
+        border: 1px solid #1a1a1a;
+        padding: 28px 24px;
+        transition: border-color 0.2s;
+      }
+      .featureCard:hover { border-color: #333; }
+      .featureIcon {
+        color: #ff6600;
+        font-size: 20px;
+        margin-bottom: 14px;
+      }
+      .featureCardTitle {
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .featureCardDesc {
+        color: #777;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      /* ── How It Works ── */
+      .howItWorks {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 60px 40px 80px;
+      }
+      .howTitle {
+        text-align: center;
+        color: #ff6600;
+        font-size: 11px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-bottom: 48px;
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+      }
+      .step { text-align: center; }
+      .stepNum {
+        color: #ff6600;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .stepTitle {
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .stepDesc {
+        color: #777;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      /* ── Pricing ── */
+      .pricing {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 60px 40px 80px;
+      }
+      .pricingTitle {
+        text-align: center;
+        color: #ff6600;
+        font-size: 11px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-bottom: 48px;
+      }
+      .pricingGrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .pricingCard {
+        background: #111;
+        border: 1px solid #1a1a1a;
+        padding: 32px 28px;
+      }
+      .pricingCard.pro { border-color: #ff6600; }
+      .pricingCardName {
+        color: #888;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .pricingCard.pro .pricingCardName { color: #ff6600; }
+      .pricingPrice {
+        color: #fff;
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .pricingPeriod {
+        color: #555;
+        font-size: 12px;
+        margin-bottom: 20px;
+      }
+      .pricingFeatures {
+        list-style: none;
+        padding: 0;
+      }
+      .pricingFeatures li {
+        color: #888;
+        font-size: 12px;
+        padding: 6px 0;
+        border-bottom: 1px solid #1a1a1a;
+      }
+      .pricingFeatures li::before {
+        content: ">";
+        color: #ff6600;
+        margin-right: 8px;
+      }
+
+      /* ── Footer ── */
+      .footer {
+        border-top: 1px solid #1a1a1a;
+        padding: 30px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .footerBrand {
+        color: #333;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .footerLinks { display: flex; gap: 20px; }
+      .footerLinks a {
+        color: #444;
+        text-decoration: none;
+        font-size: 11px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .footerLinks a:hover { color: #ff6600; }
+
+      /* ── Responsive ── */
+      @media (max-width: 768px) {
+        .heroTitle { font-size: 28px; }
+        .featureGrid, .steps, .pricingGrid { grid-template-columns: 1fr; }
+        .nav { padding: 16px 20px; }
+        .hero { padding: 60px 20px 40px; }
+        .features, .howItWorks, .pricing { padding: 40px 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav">
+      <span class="navBrand">Portfolio Agent</span>
+      <div class="navLinks">
+        <a href="#features">Features</a>
+        <a href="#how">How It Works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="/app" class="navCta">Launch App</a>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="heroTag">AI-Powered Portfolio Intelligence</div>
+      <h1 class="heroTitle">
+        Ask your portfolio<br/><span>anything.</span>
+      </h1>
+      <p class="heroSub">
+        Connect your brokerage. Ask plain-English questions. Get instant analysis powered by Claude — allocations, performance, what-if scenarios, and more.
+      </p>
+      <div class="heroCtas">
+        <a href="/app" class="ctaPrimary">Get Started Free</a>
+        <a href="#how" class="ctaSecondary">See How It Works</a>
+      </div>
+
+      <div class="terminalPreview">
+        <div class="termBar">
+          <span class="termDot r"></span>
+          <span class="termDot y"></span>
+          <span class="termDot g"></span>
+        </div>
+        <div class="termBody">
+          <div class="termLine"><span class="termPrompt">&gt;&gt;</span> <span class="termCmd">What's my portfolio allocation?</span></div>
+          <div class="termLine"><span class="termTool">[TOOL] getPortfolioSnapshot [OK 142ms]</span></div>
+          <div class="termLine">&nbsp;</div>
+          <div class="termLine"><span class="termOut">Your portfolio totals <span class="termVal">$47,230</span> across 3 accounts:</span></div>
+          <div class="termLine"><span class="termOut">&nbsp;&nbsp;VTI &nbsp;&nbsp;&nbsp;62.4% &nbsp;<span class="termVal">$29,471</span></span></div>
+          <div class="termLine"><span class="termOut">&nbsp;&nbsp;AAPL &nbsp;&nbsp;21.1% &nbsp;<span class="termVal">$9,966</span></span></div>
+          <div class="termLine"><span class="termOut">&nbsp;&nbsp;BTC &nbsp;&nbsp;&nbsp;16.5% &nbsp;<span class="termVal">$7,793</span></span></div>
+          <div class="termLine">&nbsp;</div>
+          <div class="termLine"><span class="termPrompt">&gt;&gt;</span> <span class="termCmd">What if I sold $5K of Apple and bought Tesla?</span></div>
+          <div class="termLine"><span class="termTool">[TOOL] simulateAllocationChange [OK 89ms]</span></div>
+          <div class="termLine"><span class="termOut">Simulated rebalance: AAPL drops to <span class="termVal">10.5%</span>, TSLA enters at <span class="termVal">10.6%</span>.</span></div>
+          <div class="termLine"><span class="termWarn">[CONFIDENCE: 94%]</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <div class="featuresTitle">What You Can Do</div>
+      <div class="featureGrid">
+        <div class="featureCard">
+          <div class="featureIcon">[%]</div>
+          <div class="featureCardTitle">Allocation Breakdown</div>
+          <div class="featureCardDesc">See your portfolio allocation by symbol, sector, and asset class — pulled live from your brokerage.</div>
+        </div>
+        <div class="featureCard">
+          <div class="featureIcon">[+]</div>
+          <div class="featureCardTitle">Performance Tracking</div>
+          <div class="featureCardDesc">Total return, gain/loss per holding, and period performance — all calculated from real cost basis data.</div>
+        </div>
+        <div class="featureCard">
+          <div class="featureIcon">[?]</div>
+          <div class="featureCardTitle">What-If Scenarios</div>
+          <div class="featureCardDesc">Simulate trades before you make them. See how buying or selling would change your allocation — read-only, no risk.</div>
+        </div>
+        <div class="featureCard">
+          <div class="featureIcon">[$]</div>
+          <div class="featureCardTitle">Live Market Prices</div>
+          <div class="featureCardDesc">Real-time stock and crypto prices from Yahoo Finance. Ask "What's Tesla trading at?" and get an instant answer.</div>
+        </div>
+        <div class="featureCard">
+          <div class="featureIcon">[~]</div>
+          <div class="featureCardTitle">50+ Brokerages</div>
+          <div class="featureCardDesc">Connect Robinhood, Fidelity, Schwab, E*TRADE, and 50+ more via secure read-only OAuth. We never see your password.</div>
+        </div>
+        <div class="featureCard">
+          <div class="featureIcon">[#]</div>
+          <div class="featureCardTitle">Built-In Guardrails</div>
+          <div class="featureCardDesc">No financial advice. No hallucinated numbers. Every response includes confidence scores and tool traces.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="howItWorks" id="how">
+      <div class="howTitle">How It Works</div>
+      <div class="steps">
+        <div class="step">
+          <div class="stepNum">01</div>
+          <div class="stepTitle">Connect</div>
+          <div class="stepDesc">Link your brokerage account in 30 seconds via secure read-only OAuth. Your credentials are encrypted per-user with AES-256.</div>
+        </div>
+        <div class="step">
+          <div class="stepNum">02</div>
+          <div class="stepTitle">Ask</div>
+          <div class="stepDesc">Type any question about your portfolio in plain English. The AI agent selects the right tools and fetches real data.</div>
+        </div>
+        <div class="step">
+          <div class="stepNum">03</div>
+          <div class="stepTitle">Analyze</div>
+          <div class="stepDesc">Get instant answers with allocation charts, performance metrics, and what-if simulations — all backed by your real holdings.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pricing" id="pricing">
+      <div class="pricingTitle">Pricing</div>
+      <div class="pricingGrid">
+        <div class="pricingCard">
+          <div class="pricingCardName">Free</div>
+          <div class="pricingPrice">$0</div>
+          <div class="pricingPeriod">forever</div>
+          <ul class="pricingFeatures">
+            <li>10,000 tokens/day</li>
+            <li>All 6 agent tools</li>
+            <li>1 brokerage connection</li>
+            <li>Chat history</li>
+            <li>Portfolio dashboard</li>
+          </ul>
+        </div>
+        <div class="pricingCard pro">
+          <div class="pricingCardName">Pro</div>
+          <div class="pricingPrice">$9.99</div>
+          <div class="pricingPeriod">per month</div>
+          <ul class="pricingFeatures">
+            <li>Unlimited tokens</li>
+            <li>All 6 agent tools</li>
+            <li>Unlimited brokerages</li>
+            <li>Chat history</li>
+            <li>Portfolio dashboard</li>
+            <li>Priority support</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span class="footerBrand">Portfolio Agent &copy; 2026</span>
+      <div class="footerLinks">
+        <a href="/app">Launch App</a>
+      </div>
+    </footer>
+  </body>
+</html>

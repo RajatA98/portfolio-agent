@@ -8,11 +8,14 @@ marked.use({
   breaks: true
 });
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string || '';
-
-const supabaseConfigured = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
-const supabase = createClient(SUPABASE_URL || 'https://placeholder.supabase.co', SUPABASE_ANON_KEY || 'placeholder');
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string || '').trim();
+const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string || '').trim();
+// Treat placeholder/dummy values as not configured (avoids redirecting to invalid host)
+const supabaseConfigured =
+  !!(SUPABASE_URL && SUPABASE_ANON_KEY) &&
+  !SUPABASE_URL.includes('placeholder') &&
+  SUPABASE_ANON_KEY !== 'placeholder';
+const supabase = createClient(SUPABASE_URL || 'https://invalid.supabase.co', SUPABASE_ANON_KEY || '');
 
 const API_BASE = '';
 
@@ -67,6 +70,7 @@ const authPage = document.getElementById('authPage') as HTMLElement;
 const terminalPage = document.getElementById('terminalPage') as HTMLElement;
 const headerUserEmail = document.getElementById('headerUserEmail') as HTMLSpanElement;
 const googleSignInButton = document.getElementById('googleSignInButton') as HTMLButtonElement;
+const profileBtn = document.getElementById('profileBtn') as HTMLButtonElement;
 
 // Status bar elements
 const headerDot = document.getElementById('headerDot') as HTMLSpanElement;
@@ -101,6 +105,7 @@ const holdingsTableEl = document.getElementById('holdingsTable') as HTMLDivEleme
 // Privacy toggle
 const privacyToggle = document.getElementById('privacyToggle') as HTMLButtonElement;
 let privacyMode = localStorage.getItem('privacyMode') === 'true';
+let isAgentBusy = false;
 
 function applyPrivacyToggleUI(): void {
   privacyToggle.textContent = privacyMode ? '[•]' : '[$]';
@@ -271,6 +276,10 @@ async function handleSignOut(): Promise<void> {
 }
 
 async function handleGoogleSignIn(): Promise<void> {
+  if (!supabaseConfigured) {
+    setAuthStatus('Configuration error: authentication not configured.', true);
+    return;
+  }
   setAuthStatus('REDIRECTING TO GOOGLE...');
 
   const { error } = await supabase.auth.signInWithOAuth({
@@ -322,6 +331,7 @@ signUpButton.addEventListener('click', () => void handleSignUp());
 signInButton.addEventListener('click', () => void handleSignIn());
 signOutButton.addEventListener('click', () => void handleSignOut());
 googleSignInButton.addEventListener('click', () => void handleGoogleSignIn());
+profileBtn.addEventListener('click', () => toggleProfilePanel());
 
 passwordInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
@@ -973,11 +983,13 @@ async function sendMessage(): Promise<void> {
     return;
   }
 
+  const activeChatId = history.getCurrentChatId();
   history.appendUserMessage(message);
   messageInput.value = '';
   render();
   sendButton.disabled = true;
   messageInput.disabled = true;
+  isAgentBusy = true;
 
   const payload = (() => {
     const allMessages = history.getMessages();
@@ -992,19 +1004,27 @@ async function sendMessage(): Promise<void> {
   const useStreaming = true;
 
   if (useStreaming) {
-    await sendMessageStreaming(payload, token);
+    await sendMessageStreaming(payload, token, activeChatId);
   } else {
-    await sendMessageClassic(payload, token);
+    await sendMessageClassic(payload, token, activeChatId);
   }
 
   sendButton.disabled = false;
   messageInput.disabled = false;
+  isAgentBusy = false;
+
+  // If user switched chats while agent was working, switch back to show the response
+  if (history.getCurrentChatId() !== activeChatId) {
+    history.switchChat(activeChatId);
+    renderChatList();
+  }
   render();
 }
 
 async function sendMessageStreaming(
   payload: { message: string; conversationHistory: Array<{ role: string; content: string }> },
-  token: string
+  token: string,
+  originChatId: string
 ): Promise<void> {
   const streamRequest = async (accessToken: string): Promise<Response> =>
     fetch(apiUrl('/api/chat/stream'), {
@@ -1038,16 +1058,30 @@ async function sendMessageStreaming(
       if (response.status === 401) {
         currentSession = null;
         updateAuthUI();
-        history.appendAssistantMessage('Session expired. Please sign in again.');
+        history.appendAssistantMessageToChat(originChatId, 'Session expired. Please sign in again.');
         agentConsole.remove();
         return;
       }
     }
 
+    if (response.status === 402) {
+      agentConsole.remove();
+      try {
+        const data = JSON.parse(await response.text()) as { used?: number; limit?: number };
+        history.appendAssistantMessageToChat(originChatId,
+          `⚠ Daily token limit reached (${data.used?.toLocaleString() ?? '?'}/${data.limit?.toLocaleString() ?? '?'} tokens used). Upgrade to Pro for unlimited access.`
+        );
+      } catch {
+        history.appendAssistantMessageToChat(originChatId, '⚠ Daily token limit reached. Upgrade to Pro for unlimited access.');
+      }
+      showUpgradePrompt();
+      return;
+    }
+
     if (!response.ok) {
       const text = await response.text();
       agentConsole.remove();
-      history.appendAssistantMessage(
+      history.appendAssistantMessageToChat(originChatId,
         `The agent request failed (HTTP ${response.status}). ${text.trim()}`
       );
       return;
@@ -1205,7 +1239,7 @@ async function sendMessageStreaming(
     }
 
     agentConsole.remove();
-    history.appendAssistantMessage(finalResponse.answer, {
+    history.appendAssistantMessageToChat(originChatId, finalResponse.answer, {
       confidence: finalResponse.confidence,
       warnings: finalResponse.warnings
     });
@@ -1217,18 +1251,19 @@ async function sendMessageStreaming(
       msg.includes('Failed to fetch') ||
       msg.includes('NetworkError');
     if (isNetworkError) {
-      history.appendAssistantMessage(
+      history.appendAssistantMessageToChat(originChatId,
         'The agent request failed. Could not reach the agent server. In dev, run `npm run dev` in one terminal and `npm run dev:client` in another.'
       );
     } else {
-      history.appendAssistantMessage(`The agent request failed. ${msg}`);
+      history.appendAssistantMessageToChat(originChatId, `The agent request failed. ${msg}`);
     }
   }
 }
 
 async function sendMessageClassic(
   payload: { message: string; conversationHistory: Array<{ role: string; content: string }> },
-  token: string
+  token: string,
+  _originChatId?: string
 ): Promise<void> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -1307,6 +1342,126 @@ async function sendMessageClassic(
 }
 
 // ── Render ──
+
+async function showUpgradePrompt(): Promise<void> {
+  const existing = document.getElementById('upgradeBar');
+  if (existing) return;
+  const bar = document.createElement('div');
+  bar.id = 'upgradeBar';
+  bar.className = 'upgradeBar';
+  bar.innerHTML = `<span>TOKEN LIMIT REACHED</span><button id="upgradeBtn" class="upgradeBtn">UPGRADE TO PRO</button>`;
+  messagesEl.parentElement?.insertBefore(bar, messagesEl.nextSibling);
+  bar.querySelector('#upgradeBtn')?.addEventListener('click', async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    try {
+      const res = await fetch(apiUrl('/api/stripe/create-checkout-session'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+      });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        history.appendAssistantMessage(`Upgrade failed: ${data.error ?? 'unknown error'}`);
+        render();
+      }
+    } catch (err) {
+      history.appendAssistantMessage(`Upgrade failed: ${err instanceof Error ? err.message : String(err)}`);
+      render();
+    }
+  });
+}
+
+// ── Profile panel ──
+
+async function loadProfileData(): Promise<{ email: string; subscription: string; connections: Array<{ brokerageName: string }> }> {
+  const token = getAccessToken();
+  const email = currentSession?.user?.email ?? '';
+  let subscription = 'Free';
+  let connections: Array<{ brokerageName: string }> = [];
+
+  if (token) {
+    try {
+      const profileRes = await fetch(apiUrl('/api/profile'), { headers: { Authorization: `Bearer ${token}` } });
+      if (profileRes.ok) {
+        const data = (await profileRes.json()) as { subscriptionStatus?: string; tokensUsed?: number; tokenLimit?: number };
+        if (data.subscriptionStatus === 'active') subscription = 'Pro';
+        else subscription = `Free (${data.tokensUsed?.toLocaleString() ?? 0}/${data.tokenLimit?.toLocaleString() ?? '10,000'} tokens today)`;
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const connRes = await fetch(apiUrl('/api/snaptrade/connections'), { headers: { Authorization: `Bearer ${token}` } });
+      if (connRes.ok) {
+        const data = (await connRes.json()) as { connections?: Array<{ brokerageName: string }> };
+        connections = data.connections ?? [];
+      }
+    } catch { /* ignore */ }
+  }
+
+  return { email, subscription, connections };
+}
+
+function toggleProfilePanel(): void {
+  const existing = document.getElementById('profilePanel');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const panel = document.createElement('div');
+  panel.id = 'profilePanel';
+  panel.className = 'profilePanel';
+  panel.innerHTML = '<div class="profileLoading">LOADING...</div>';
+  document.body.appendChild(panel);
+
+  void loadProfileData().then(({ email, subscription, connections }) => {
+    const brokerageList = connections.length > 0
+      ? connections.map((c) => `<div class="profileItem">${escapeHtml(c.brokerageName)}</div>`).join('')
+      : '<div class="profileItem dimmed">No brokerages connected</div>';
+
+    panel.innerHTML = `
+      <div class="profileHeader">PROFILE</div>
+      <div class="profileSection">
+        <div class="profileLabel">EMAIL</div>
+        <div class="profileItem">${escapeHtml(email)}</div>
+      </div>
+      <div class="profileSection">
+        <div class="profileLabel">SUBSCRIPTION</div>
+        <div class="profileItem">${escapeHtml(subscription)}</div>
+        ${subscription.startsWith('Free') ? '<button id="profileUpgradeBtn" class="upgradeBtn" style="margin-top:4px">UPGRADE TO PRO</button>' : ''}
+      </div>
+      <div class="profileSection">
+        <div class="profileLabel">BROKERAGE ACCOUNTS</div>
+        ${brokerageList}
+      </div>
+      <button id="profileCloseBtn" class="profileCloseBtn">CLOSE</button>
+    `;
+
+    panel.querySelector('#profileCloseBtn')?.addEventListener('click', () => panel.remove());
+    panel.querySelector('#profileUpgradeBtn')?.addEventListener('click', async () => {
+      const token = getAccessToken();
+      if (!token) return;
+      try {
+        const res = await fetch(apiUrl('/api/stripe/create-checkout-session'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+        });
+        const data = (await res.json()) as { url?: string };
+        if (data.url) window.location.href = data.url;
+      } catch { /* ignore */ }
+    });
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', function handler(e) {
+    if (!panel.contains(e.target as Node) && !(e.target as HTMLElement).closest('#profileBtn')) {
+      panel.remove();
+      document.removeEventListener('click', handler);
+    }
+  });
+}
 
 function render(): void {
   renderChatList();

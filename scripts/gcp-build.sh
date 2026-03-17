@@ -25,5 +25,4 @@ fi
 
 echo "Using VITE_SUPABASE_URL from .env"
 gcloud builds submit --config=cloudbuild.yaml \
-  --substitutions="_VITE_SUPABASE_URL=${VITE_SUPABASE_URL}" \
-  --substitutions="_VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}"
+  --substitutions="_VITE_SUPABASE_URL=${VITE_SUPABASE_URL},_VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}"

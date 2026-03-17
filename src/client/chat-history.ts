@@ -219,6 +219,35 @@ export class AgentChatHistoryService {
     });
   }
 
+  /**
+   * Append an assistant message to a specific chat (by ID), even if it's not the current chat.
+   * Used when a streaming response finishes after the user switched chats.
+   */
+  public appendAssistantMessageToChat(
+    chatId: string,
+    content: string,
+    meta?: { confidence?: number; warnings?: string[] }
+  ) {
+    if (chatId === this.currentChatId) {
+      this.appendAssistantMessage(content, meta);
+      return;
+    }
+    // Load that chat's messages, append, and save
+    const key = this.chatKey(chatId);
+    let messages: AgentChatMessage[] = [];
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) messages = JSON.parse(raw) as AgentChatMessage[];
+    } catch { /* ignore */ }
+    messages.push({
+      confidence: meta?.confidence,
+      content,
+      role: 'assistant',
+      warnings: meta?.warnings
+    });
+    localStorage.setItem(key, JSON.stringify(messages.slice(-MAX_HISTORY_MESSAGES)));
+  }
+
   public appendUserMessage(content: string) {
     this.appendMessage({
       content,

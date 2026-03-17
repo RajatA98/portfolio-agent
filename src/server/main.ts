@@ -129,6 +129,27 @@ app.get('/api/auth/status', (req, res) => {
   res.json({ authenticated: true, userId: authReq.userId });
 });
 
+// --- Profile route ---
+app.get('/api/profile', async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const userId = authReq.userId!;
+  const prisma = getPrisma();
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionStatus: true, email: true }
+    });
+    const tokensUsed = await usageService.getTotalTokensThisPeriod(userId);
+    res.json({
+      subscriptionStatus: user?.subscriptionStatus ?? 'free',
+      tokensUsed,
+      tokenLimit: agentConfig.freeTierDailyTokenLimit
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to load profile' });
+  }
+});
+
 // --- Stripe checkout (requires Stripe env vars) ---
 app.post('/api/stripe/create-checkout-session', async (req, res) => {
   if (!agentConfig.stripeEnabled) {
@@ -154,7 +175,8 @@ app.post('/api/stripe/create-checkout-session', async (req, res) => {
       line_items: [{ price: agentConfig.stripePriceIdPro, quantity: 1 }],
       success_url: `${baseUrl}/?checkout=success`,
       cancel_url: `${baseUrl}/?checkout=cancel`,
-      client_reference_id: userId
+      client_reference_id: userId,
+      allow_promotion_codes: true
     };
     if (user.stripeCustomerId) {
       sessionParams.customer = user.stripeCustomerId;
@@ -452,12 +474,28 @@ if (agentConfig.enableSnapTrade) {
 // --- Serve built client ---
 const clientDistPath = path.resolve(__dirname, '../client');
 const clientIndexPath = path.join(clientDistPath, 'index.html');
+const landingPath = path.join(clientDistPath, 'landing.html');
 const hasBuiltClient = existsSync(clientIndexPath);
 
 if (hasBuiltClient) {
   app.use(express.static(clientDistPath));
+
+  // Landing page at root
+  app.get('/', (_req, res) => {
+    if (existsSync(landingPath)) {
+      res.sendFile(landingPath);
+    } else {
+      res.sendFile(clientIndexPath);
+    }
+  });
+
+  // App at /app (and all sub-routes for SPA)
+  app.get('/app', (_req, res) => {
+    res.sendFile(clientIndexPath);
+  });
+
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/') || req.path === '/health') {
+    if (req.path.startsWith('/api/') || req.path === '/health' || req.path === '/snaptrade/callback') {
       next();
       return;
     }

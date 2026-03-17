@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 const agentPort = '3334';
 
@@ -16,6 +17,12 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../../dist/client'
+    outDir: '../../dist/client',
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'src/client/index.html'),
+        landing: resolve(__dirname, 'src/client/landing.html')
+      }
+    }
   }
 });
