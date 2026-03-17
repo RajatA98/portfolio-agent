@@ -97,6 +97,7 @@ const allocationCanvas = document.getElementById('allocationChart') as HTMLCanva
 const allocationLegend = document.getElementById('allocationLegend') as HTMLDivElement;
 const performanceValue = document.getElementById('performanceValue') as HTMLDivElement;
 const performanceLabel = document.getElementById('performanceLabel') as HTMLDivElement;
+const performanceCanvas = document.getElementById('performanceChart') as HTMLCanvasElement;
 const holdingsTableEl = document.getElementById('holdingsTable') as HTMLDivElement;
 
 // Privacy toggle
@@ -612,8 +613,86 @@ function renderDashboard(
   // Allocation donut chart
   renderDonutChart(holdings, total);
 
+  // Performance bar chart (gain/loss per holding)
+  renderPerformanceChart(holdings);
+
   // Holdings table
   renderHoldingsTable(holdings);
+}
+
+function renderPerformanceChart(
+  holdings: Array<{
+    symbol: string;
+    costBasis: number | null;
+    currentValue: number | null;
+  }>
+): void {
+  const ctx = performanceCanvas.getContext('2d');
+  if (!ctx) return;
+
+  const data = holdings
+    .filter((h) => h.costBasis != null && h.costBasis > 0 && h.currentValue != null)
+    .map((h) => ({
+      symbol: h.symbol,
+      gain: (h.currentValue! - h.costBasis!) / h.costBasis! * 100
+    }))
+    .sort((a, b) => b.gain - a.gain);
+
+  if (data.length === 0) {
+    performanceCanvas.style.display = 'none';
+    return;
+  }
+  performanceCanvas.style.display = 'block';
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = 320;
+  const H = Math.max(160, data.length * 28 + 20);
+  performanceCanvas.width = W * dpr;
+  performanceCanvas.height = H * dpr;
+  performanceCanvas.style.width = `${W}px`;
+  performanceCanvas.style.height = `${H}px`;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const labelW = 50;
+  const chartW = W - labelW - 40;
+  const barH = 16;
+  const gap = 8;
+  const maxAbs = Math.max(...data.map((d) => Math.abs(d.gain)), 1);
+  const centerX = labelW + chartW / 2;
+
+  for (let i = 0; i < data.length; i++) {
+    const d = data[i];
+    const y = 10 + i * (barH + gap);
+    const barWidth = (d.gain / maxAbs) * (chartW / 2);
+
+    ctx.fillStyle = '#888';
+    ctx.font = '11px "SF Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(d.symbol, labelW - 6, y + barH / 2);
+
+    const isPositive = d.gain >= 0;
+    ctx.fillStyle = isPositive ? '#33ff33' : '#ff3333';
+    if (isPositive) {
+      ctx.fillRect(centerX, y, barWidth, barH);
+    } else {
+      ctx.fillRect(centerX + barWidth, y, -barWidth, barH);
+    }
+
+    ctx.fillStyle = isPositive ? '#33ff33' : '#ff3333';
+    ctx.font = '10px "SF Mono", monospace';
+    ctx.textAlign = isPositive ? 'left' : 'right';
+    const labelX = isPositive ? centerX + barWidth + 4 : centerX + barWidth - 4;
+    ctx.fillText(`${d.gain >= 0 ? '+' : ''}${d.gain.toFixed(1)}%`, labelX, y + barH / 2);
+  }
+
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(centerX, 4);
+  ctx.lineTo(centerX, H - 4);
+  ctx.stroke();
 }
 
 const CHART_COLORS = [
