@@ -114,5 +114,24 @@ export const agentConfig = {
   // --- Database ---
   get databaseUrl(): string {
     return process.env.DATABASE_URL || '';
+  },
+
+  // --- Free tier token limit (daily) ---
+  get freeTierDailyTokenLimit(): number {
+    return Number(process.env.FREE_TIER_DAILY_TOKEN_LIMIT || 10000);
+  },
+
+  // --- Stripe ---
+  get stripeSecretKey(): string {
+    return process.env.STRIPE_SECRET_KEY || '';
+  },
+  get stripeWebhookSecret(): string {
+    return process.env.STRIPE_WEBHOOK_SECRET || '';
+  },
+  get stripePriceIdPro(): string {
+    return process.env.STRIPE_PRICE_ID_PRO || '';
+  },
+  get stripeEnabled(): boolean {
+    return !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID_PRO);
   }
 };

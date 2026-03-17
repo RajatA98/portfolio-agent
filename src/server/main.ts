@@ -4,21 +4,104 @@ import cors from 'cors';
 import express from 'express';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import Stripe from 'stripe';
 
 import { agentConfig } from './agent.config';
 import { AgentService, StreamEvent } from './agent.service';
 import { AgentChatRequest } from './agent.types';
+import { getPrisma } from './lib/prisma';
 import { AuthenticatedRequest, requireAuth } from './middleware/auth';
 import { SnapTradeService } from './services/snaptrade.service';
+import { UsageService } from './services/usage.service';
 
 const app = express();
 const agentService = new AgentService();
+const usageService = new UsageService();
 
 app.use(
   cors({
     origin: agentConfig.corsOrigin
   })
 );
+
+// Stripe webhook must receive raw body for signature verification (register before express.json)
+app.post(
+  '/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    if (!agentConfig.stripeEnabled || !agentConfig.stripeWebhookSecret) {
+      res.status(501).send('Stripe webhook not configured');
+      return;
+    }
+    const sig = req.headers['stripe-signature'] as string | undefined;
+    if (!sig) {
+      res.status(400).send('Missing stripe-signature');
+      return;
+    }
+    const rawBody = req.body as Buffer;
+    let event: Stripe.Event;
+    try {
+      const stripe = new Stripe(agentConfig.stripeSecretKey);
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        sig,
+        agentConfig.stripeWebhookSecret
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[stripe] Webhook signature verification failed:', msg);
+      res.status(400).send(`Webhook Error: ${msg}`);
+      return;
+    }
+    const prisma = getPrisma();
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const userId = session.client_reference_id as string | null;
+          if (!userId) break;
+          const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+          const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+          if (!customerId || !subscriptionId) break;
+          await prisma.user.update({
+            where: { id: userId },
+            data: {
+              stripeCustomerId: customerId,
+              subscriptionId,
+              subscriptionStatus: 'active'
+            }
+          });
+          break;
+        }
+        case 'customer.subscription.updated': {
+          const sub = event.data.object as Stripe.Subscription;
+          await prisma.user.updateMany({
+            where: { subscriptionId: sub.id },
+            data: { subscriptionStatus: sub.status === 'active' ? 'active' : 'past_due' }
+          });
+          break;
+        }
+        case 'customer.subscription.deleted': {
+          const sub = event.data.object as Stripe.Subscription;
+          await prisma.user.updateMany({
+            where: { subscriptionId: sub.id },
+            data: { subscriptionStatus: 'canceled', subscriptionId: null }
+          });
+          break;
+        }
+        default:
+          // ignore other events
+          break;
+      }
+    } catch (err) {
+      console.error('[stripe] Webhook handler error:', err);
+      res.status(500).send('Webhook handler failed');
+      return;
+    }
+    res.sendStatus(200);
+  }
+);
+
 app.use(express.json({ limit: '1mb' }));
 
 // --- Health check (no auth) ---
@@ -46,6 +129,47 @@ app.get('/api/auth/status', (req, res) => {
   res.json({ authenticated: true, userId: authReq.userId });
 });
 
+// --- Stripe checkout (requires Stripe env vars) ---
+app.post('/api/stripe/create-checkout-session', async (req, res) => {
+  if (!agentConfig.stripeEnabled) {
+    res.status(503).json({ error: 'Billing not configured' });
+    return;
+  }
+  const authReq = req as AuthenticatedRequest;
+  const userId = authReq.userId!;
+  const prisma = getPrisma();
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { stripeCustomerId: true, email: true }
+  });
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+  const baseUrl = agentConfig.corsOrigin || 'http://localhost:5179';
+  try {
+    const stripe = new Stripe(agentConfig.stripeSecretKey);
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: 'subscription',
+      line_items: [{ price: agentConfig.stripePriceIdPro, quantity: 1 }],
+      success_url: `${baseUrl}/?checkout=success`,
+      cancel_url: `${baseUrl}/?checkout=cancel`,
+      client_reference_id: userId
+    };
+    if (user.stripeCustomerId) {
+      sessionParams.customer = user.stripeCustomerId;
+    } else if (user.email) {
+      sessionParams.customer_email = user.email;
+    }
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    res.json({ url: session.url });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[stripe] Create checkout session failed:', msg);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
+});
+
 // --- Chat route ---
 app.post('/api/chat', async (req, res) => {
   try {
@@ -58,12 +182,41 @@ app.post('/api/chat', async (req, res) => {
       return;
     }
 
+    // Free-tier token limit check (skip for active subscribers)
+    const prisma = getPrisma();
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionStatus: true }
+    });
+    const isPro = user?.subscriptionStatus === 'active';
+    if (!isPro) {
+      const used = await usageService.getTotalTokensThisPeriod(userId);
+      const limit = agentConfig.freeTierDailyTokenLimit;
+      if (used >= limit) {
+        res.status(402).json({
+          limitReached: true,
+          used,
+          limit,
+          upgradeUrl: '/api/stripe/create-checkout-session'
+        });
+        return;
+      }
+    }
+
     const response = await agentService.chat(body, {
       userId,
       supabaseUserId: authReq.supabaseUserId,
       baseCurrency: body.baseCurrency ?? 'USD',
       language: body.language ?? 'en'
     });
+
+    // Record token usage for free-tier enforcement
+    const tokenUsage = response.loopMeta?.tokenUsage;
+    if (tokenUsage && (tokenUsage.inputTokens > 0 || tokenUsage.outputTokens > 0)) {
+      await usageService
+        .recordUsage(userId, tokenUsage.inputTokens, tokenUsage.outputTokens)
+        .catch((err) => console.error('[usage] record failed:', err));
+    }
 
     res.json(response);
   } catch (error) {
@@ -83,6 +236,27 @@ app.post('/api/chat/stream', async (req, res) => {
   if (!body?.message || typeof body.message !== 'string') {
     res.status(400).json({ error: 'message is required' });
     return;
+  }
+
+  // Free-tier token limit check (skip for active subscribers)
+  const prisma = getPrisma();
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscriptionStatus: true }
+  });
+  const isPro = user?.subscriptionStatus === 'active';
+  if (!isPro) {
+    const used = await usageService.getTotalTokensThisPeriod(userId);
+    const limit = agentConfig.freeTierDailyTokenLimit;
+    if (used >= limit) {
+      res.status(402).json({
+        limitReached: true,
+        used,
+        limit,
+        upgradeUrl: '/api/stripe/create-checkout-session'
+      });
+      return;
+    }
   }
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -105,6 +279,14 @@ app.post('/api/chat/stream', async (req, res) => {
       },
       sendSSE
     );
+
+    // Record token usage for free-tier enforcement
+    const tokenUsage = response.loopMeta?.tokenUsage;
+    if (tokenUsage && (tokenUsage.inputTokens > 0 || tokenUsage.outputTokens > 0)) {
+      await usageService
+        .recordUsage(userId, tokenUsage.inputTokens, tokenUsage.outputTokens)
+        .catch((err) => console.error('[usage] record failed:', err));
+    }
 
     // Send final done event
     sendSSE({

@@ -30,7 +30,8 @@
     "express": "^4.21.2",
     "langsmith": "^0.5.6",
     "marked": "^17.0.4",
-    "snaptrade-typescript-sdk": "^9.0.173"
+    "snaptrade-typescript-sdk": "^9.0.173",
+    "stripe": "^20.4.1"
   },
   "devDependencies": {
     "@types/big.js": "^6.2.2",

@@ -9,15 +9,34 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(uuid())
-  supabaseUserId String   @unique
-  email          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  supabaseUserId      String    @unique
+  email               String?
+  stripeCustomerId    String?
+  subscriptionStatus  String    @default("free") // free | active | past_due | canceled
+  subscriptionId      String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   brokerageConnections BrokerageConnection[]
+  usage                Usage[]
 
   @@index([supabaseUserId])
+}
+
+model Usage {
+  id           String   @id @default(uuid())
+  userId       String
+  periodStart  DateTime // start of month (UTC)
+  inputTokens  Int      @default(0)
+  outputTokens Int     @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, periodStart])
+  @@index([userId])
 }
 
 model BrokerageConnection {
