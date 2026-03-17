@@ -214,18 +214,32 @@ function checkSourceAttribution({
       }
       if (found) break;
 
-      // Computed value matching: try price × quantity combinations from holdings
+      // Computed value matching from holdings data
       const snapshot = toolResults.get('getPortfolioSnapshot') as
         | PortfolioSnapshotResult
         | undefined;
       if (snapshot?.holdings) {
         for (const h of snapshot.holdings) {
           const price = h.price?.amount ?? (snapshot.priceMap?.[h.symbol]);
+          const value = h.value?.amount;
+          const costBasis = h.costBasis?.amount;
+
+          // price × quantity
           if (price && h.quantity > 0) {
             const computedValue = price * h.quantity;
             if (Math.abs(computedValue - amount) / Math.max(computedValue, 1) < fuzzyThreshold) {
               found = true;
               source = 'getPortfolioSnapshot (computed)';
+              break;
+            }
+          }
+
+          // gain/loss: value - costBasis
+          if (value != null && costBasis != null) {
+            const gainLoss = Math.abs(value - costBasis);
+            if (gainLoss > 0 && Math.abs(gainLoss - amount) / Math.max(gainLoss, 1) < fuzzyThreshold) {
+              found = true;
+              source = 'getPortfolioSnapshot (gain/loss)';
               break;
             }
           }
