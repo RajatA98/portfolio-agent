@@ -295,7 +295,8 @@ export class SnapTradeService implements BrokerageService {
 
       for (const pos of positions) {
         // Combine units + fractional_units (some brokerages split them)
-        const units = (pos.units ?? 0) + (pos.fractional_units ?? 0) || pos.units ?? pos.fractional_units ?? 0;
+        const rawUnits = (pos.units ?? 0) + (pos.fractional_units ?? 0);
+        const units = rawUnits > 0 ? rawUnits : (pos.units ?? pos.fractional_units ?? 0);
         const ticker = pos.symbol?.symbol?.symbol ?? 'UNKNOWN';
 
         // Log every position so we can debug missing holdings
