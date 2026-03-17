@@ -272,7 +272,8 @@ export class SnapTradeService implements BrokerageService {
       });
 
       const positions = holdingsRes.data.positions ?? [];
-      console.log(`[snaptrade] account ${account.id} (${account.institution_name}): ${positions.length} positions`);
+      const posSymbols = positions.map((p) => p.symbol?.symbol?.symbol ?? 'UNKNOWN');
+      console.log(`[snaptrade] account ${account.id} (${account.institution_name}): ${positions.length} positions [${posSymbols.join(', ')}]`);
 
       // Debug: log raw response fields to investigate staked/locked positions
       if (process.env.SNAPTRADE_DEBUG === 'true') {
@@ -293,7 +294,8 @@ export class SnapTradeService implements BrokerageService {
       }
 
       for (const pos of positions) {
-        const units = pos.units ?? pos.fractional_units ?? 0;
+        // Combine units + fractional_units (some brokerages split them)
+        const units = (pos.units ?? 0) + (pos.fractional_units ?? 0) || pos.units ?? pos.fractional_units ?? 0;
         const ticker = pos.symbol?.symbol?.symbol ?? 'UNKNOWN';
 
         // Log every position so we can debug missing holdings
