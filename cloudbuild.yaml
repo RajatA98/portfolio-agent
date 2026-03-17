@@ -30,6 +30,8 @@ steps:
       - 'VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}'
       - '--build-arg'
       - 'VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}'
+      - '--build-arg'
+      - 'CACHE_BUST=${BUILD_ID}'
       - '-t'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${BUILD_ID}'
       - '-t'

@@ -14,6 +14,8 @@ COPY . .
 # Vite inlines VITE_ vars at build time — pass as build-args (e.g. Cloud Build substitutions)
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
+# Cache buster: pass BUILD_ID or timestamp to force vite rebuild when args change
+ARG CACHE_BUST=0
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 
