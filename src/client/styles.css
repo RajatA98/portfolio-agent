@@ -153,6 +153,39 @@ body {
   text-decoration: underline;
 }
 
+.authPanelTitle {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #ff6600;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.authActionsSingle button {
+  width: 100%;
+}
+
+.authSwitch {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.authSwitchLink {
+  background: none;
+  border: none;
+  color: #888;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-transform: uppercase;
+}
+
+.authSwitchLink:hover {
+  color: #ff6600;
+}
+
 .authActions {
   display: flex;
   gap: 8px;

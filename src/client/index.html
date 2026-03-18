@@ -13,37 +13,64 @@
         <div class="authBrand">PORTFOLIO TERMINAL</div>
         <p class="authTagline">PORTFOLIO INTELLIGENCE SYSTEM</p>
 
-        <button id="googleSignInButton" type="button" class="googleSignIn">SIGN IN WITH GOOGLE</button>
-
-        <div class="authDivider">
-          <span class="authDividerLine"></span>
-          <span class="authDividerText">OR</span>
-          <span class="authDividerLine"></span>
-        </div>
-
-        <label class="authLabel">
-          EMAIL
-          <input id="emailInput" type="email" placeholder="EMAIL" autocomplete="email" />
-        </label>
-        <label class="authLabel">
-          PASSWORD
-          <input id="passwordInput" type="password" placeholder="PASSWORD" autocomplete="new-password" />
-        </label>
-        <label class="authLabel">
-          CONFIRM PASSWORD
-          <input id="passwordConfirmInput" type="password" placeholder="CONFIRM PASSWORD" autocomplete="new-password" />
-        </label>
-
-        <div class="authConsent">
-          <label class="authCheckboxLabel">
-            <input type="checkbox" id="termsConsentCheckbox" />
-            <span>I agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a></span>
+        <!-- Sign in (default) -->
+        <div id="authSignInPanel" class="authPanel">
+          <p class="authPanelTitle">SIGN IN</p>
+          <button id="googleSignInButton" type="button" class="googleSignIn">SIGN IN WITH GOOGLE</button>
+          <div class="authDivider">
+            <span class="authDividerLine"></span>
+            <span class="authDividerText">OR</span>
+            <span class="authDividerLine"></span>
+          </div>
+          <label class="authLabel">
+            EMAIL
+            <input id="signInEmail" type="email" placeholder="EMAIL" autocomplete="email" />
           </label>
+          <label class="authLabel">
+            PASSWORD
+            <input id="signInPassword" type="password" placeholder="PASSWORD" autocomplete="current-password" />
+          </label>
+          <div class="authActions authActionsSingle">
+            <button id="signInButton" type="button">SIGN IN</button>
+          </div>
+          <p class="authSwitch">
+            <button type="button" id="showSignUpLink" class="authSwitchLink">CREATE ACCOUNT</button>
+          </p>
         </div>
 
-        <div class="authActions">
-          <button id="signUpButton" type="button">SIGN UP</button>
-          <button id="signInButton" type="button">SIGN IN</button>
+        <!-- Sign up -->
+        <div id="authSignUpPanel" class="authPanel" style="display:none">
+          <p class="authPanelTitle">SIGN UP</p>
+          <button id="googleSignUpButton" type="button" class="googleSignIn">SIGN UP WITH GOOGLE</button>
+          <div class="authDivider">
+            <span class="authDividerLine"></span>
+            <span class="authDividerText">OR</span>
+            <span class="authDividerLine"></span>
+          </div>
+          <label class="authLabel">
+            EMAIL
+            <input id="signUpEmail" type="email" placeholder="EMAIL" autocomplete="email" />
+          </label>
+          <label class="authLabel">
+            PASSWORD
+            <input id="signUpPassword" type="password" placeholder="PASSWORD" autocomplete="new-password" />
+          </label>
+          <label class="authLabel">
+            CONFIRM PASSWORD
+            <input id="signUpPasswordConfirm" type="password" placeholder="CONFIRM PASSWORD" autocomplete="new-password" />
+          </label>
+          <div class="authConsent">
+            <label class="authCheckboxLabel">
+              <input type="checkbox" id="termsConsentCheckbox" />
+              <span>I agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a></span>
+            </label>
+          </div>
+          <div class="authActions authActionsSingle">
+            <button id="signUpButton" type="button">SIGN UP</button>
+          </div>
+          <p class="authSwitch">
+            <button type="button" id="showSignInLink" class="authSwitchLink">ALREADY HAVE AN ACCOUNT? SIGN IN</button>
+          </p>
         </div>
 
         <span id="authStatus" class="authStatusMsg"></span>

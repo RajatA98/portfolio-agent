@@ -63,9 +63,15 @@ let history = new AgentChatHistoryService(undefined, {
 const messagesEl = document.getElementById('messages') as HTMLDivElement;
 const messageInput = document.getElementById('messageInput') as HTMLInputElement;
 const sendButton = document.getElementById('sendButton') as HTMLButtonElement;
-const emailInput = document.getElementById('emailInput') as HTMLInputElement;
-const passwordInput = document.getElementById('passwordInput') as HTMLInputElement;
-const passwordConfirmInput = document.getElementById('passwordConfirmInput') as HTMLInputElement;
+const signInEmail = document.getElementById('signInEmail') as HTMLInputElement;
+const signInPassword = document.getElementById('signInPassword') as HTMLInputElement;
+const signUpEmail = document.getElementById('signUpEmail') as HTMLInputElement;
+const signUpPassword = document.getElementById('signUpPassword') as HTMLInputElement;
+const signUpPasswordConfirm = document.getElementById('signUpPasswordConfirm') as HTMLInputElement;
+const authSignInPanel = document.getElementById('authSignInPanel') as HTMLElement;
+const authSignUpPanel = document.getElementById('authSignUpPanel') as HTMLElement;
+const showSignUpLink = document.getElementById('showSignUpLink') as HTMLButtonElement;
+const showSignInLink = document.getElementById('showSignInLink') as HTMLButtonElement;
 const signUpButton = document.getElementById('signUpButton') as HTMLButtonElement;
 const signInButton = document.getElementById('signInButton') as HTMLButtonElement;
 const signOutButton = document.getElementById('signOutButton') as HTMLButtonElement;
@@ -74,6 +80,7 @@ const authPage = document.getElementById('authPage') as HTMLElement;
 const terminalPage = document.getElementById('terminalPage') as HTMLElement;
 const headerUserEmail = document.getElementById('headerUserEmail') as HTMLSpanElement;
 const googleSignInButton = document.getElementById('googleSignInButton') as HTMLButtonElement;
+const googleSignUpButton = document.getElementById('googleSignUpButton') as HTMLButtonElement;
 const termsConsentCheckbox = document.getElementById('termsConsentCheckbox') as HTMLInputElement;
 const profileBtn = document.getElementById('profileBtn') as HTMLButtonElement;
 
@@ -252,10 +259,22 @@ function isPasswordSecure(password: string): { ok: boolean; message?: string } {
   return { ok: true };
 }
 
+function showAuthSignInPanel(): void {
+  if (authSignInPanel) authSignInPanel.style.display = '';
+  if (authSignUpPanel) authSignUpPanel.style.display = 'none';
+  setAuthStatus('');
+}
+
+function showAuthSignUpPanel(): void {
+  if (authSignInPanel) authSignInPanel.style.display = 'none';
+  if (authSignUpPanel) authSignUpPanel.style.display = '';
+  setAuthStatus('');
+}
+
 async function handleSignUp(): Promise<void> {
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
-  const passwordConfirm = passwordConfirmInput?.value.trim() ?? '';
+  const email = signUpEmail.value.trim();
+  const password = signUpPassword.value.trim();
+  const passwordConfirm = signUpPasswordConfirm.value.trim();
 
   if (!email || !password) {
     setAuthStatus('Email and password are required.', true);
@@ -297,8 +316,8 @@ async function handleSignUp(): Promise<void> {
 }
 
 async function handleSignIn(): Promise<void> {
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
+  const email = signInEmail.value.trim();
+  const password = signInPassword.value.trim();
 
   if (!email || !password) {
     setAuthStatus('Email and password are required.', true);
@@ -325,12 +344,34 @@ async function handleSignOut(): Promise<void> {
   currentSession = null;
   hasBrokerage = false;
   setAuthStatus('');
+  showAuthSignInPanel();
   dashboardPanel.style.display = 'none';
   initHistoryForUser();
   updateAuthUI();
 }
 
+async function startGoogleOAuth(): Promise<void> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/app`
+    }
+  });
+  if (error) {
+    setAuthStatus(`Google sign in failed: ${error.message}`, true);
+  }
+}
+
 async function handleGoogleSignIn(): Promise<void> {
+  if (!supabaseConfigured) {
+    setAuthStatus('Configuration error: authentication not configured.', true);
+    return;
+  }
+  setAuthStatus('REDIRECTING TO GOOGLE...');
+  await startGoogleOAuth();
+}
+
+async function handleGoogleSignUp(): Promise<void> {
   if (!supabaseConfigured) {
     setAuthStatus('Configuration error: authentication not configured.', true);
     return;
@@ -340,17 +381,7 @@ async function handleGoogleSignIn(): Promise<void> {
     return;
   }
   setAuthStatus('REDIRECTING TO GOOGLE...');
-
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/app`
-    }
-  });
-
-  if (error) {
-    setAuthStatus(`Google sign in failed: ${error.message}`, true);
-  }
+  await startGoogleOAuth();
 }
 
 supabase.auth.onAuthStateChange((event, session) => {
@@ -390,12 +421,21 @@ signUpButton.addEventListener('click', () => void handleSignUp());
 signInButton.addEventListener('click', () => void handleSignIn());
 signOutButton.addEventListener('click', () => void handleSignOut());
 googleSignInButton.addEventListener('click', () => void handleGoogleSignIn());
+googleSignUpButton.addEventListener('click', () => void handleGoogleSignUp());
+showSignUpLink.addEventListener('click', () => showAuthSignUpPanel());
+showSignInLink.addEventListener('click', () => showAuthSignInPanel());
 profileBtn.addEventListener('click', () => toggleProfilePanel());
 
-passwordInput.addEventListener('keydown', (event) => {
+signInPassword.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     event.preventDefault();
     void handleSignIn();
+  }
+});
+signUpPasswordConfirm.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    void handleSignUp();
   }
 });
 
