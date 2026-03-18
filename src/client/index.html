@@ -27,8 +27,19 @@
         </label>
         <label class="authLabel">
           PASSWORD
-          <input id="passwordInput" type="password" placeholder="PASSWORD" autocomplete="current-password" />
+          <input id="passwordInput" type="password" placeholder="PASSWORD" autocomplete="new-password" />
         </label>
+        <label class="authLabel">
+          CONFIRM PASSWORD
+          <input id="passwordConfirmInput" type="password" placeholder="CONFIRM PASSWORD" autocomplete="new-password" />
+        </label>
+
+        <div class="authConsent">
+          <label class="authCheckboxLabel">
+            <input type="checkbox" id="termsConsentCheckbox" />
+            <span>I agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a></span>
+          </label>
+        </div>
 
         <div class="authActions">
           <button id="signUpButton" type="button">SIGN UP</button>

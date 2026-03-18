@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy — Portfolio Agent</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: #0a0a0a;
+        color: #c8c8c8;
+        font-family: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }
+      h1 { font-size: 18px; letter-spacing: 2px; text-transform: uppercase; color: #ff6600; margin-bottom: 24px; }
+      h2 { font-size: 14px; color: #e0e0e0; margin-top: 24px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+      p { margin-bottom: 14px; }
+      ul { margin: 10px 0 14px 20px; }
+      li { margin-bottom: 6px; }
+      a { color: #ff6600; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .back { display: inline-block; margin-bottom: 24px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <a href="/app" class="back">← Back to app</a>
+    <h1>Privacy</h1>
+
+    <h2>What we store</h2>
+    <p>We store your account identifier (Supabase user ID), email (if provided), and—when you connect a brokerage—encrypted connection data (SnapTrade user secret and institution name). Brokerage connection secrets are encrypted per-user with AES-256-GCM. We do not store your brokerage login credentials, portfolio holdings, balances, or transaction history in our database.</p>
+
+    <h2>What we don’t store</h2>
+    <p>Portfolio holdings and prices are fetched when you ask questions and cached only briefly in memory (e.g. 60 seconds). Chat messages are not persisted server-side. We never see or store your brokerage username or password.</p>
+
+    <h2>Third parties</h2>
+    <p>Chat content is sent to Anthropic (Claude) for AI responses and may be sent to observability tools (e.g. Langfuse, LangSmith) if enabled. Brokerage data is sent to SnapTrade to retrieve your holdings. See our <a href="/terms.html">Terms of Service</a> for more.</p>
+
+    <p style="margin-top: 24px;"><a href="/app" class="back">← Back to app</a></p>
+  </body>
+</html>

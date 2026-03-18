@@ -123,6 +123,36 @@ body {
   border-color: #ff6600;
 }
 
+.authConsent {
+  margin-top: 14px;
+}
+
+.authCheckboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #888;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.authCheckboxLabel input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #ff6600;
+}
+
+.authCheckboxLabel a {
+  color: #ff6600;
+  text-decoration: none;
+}
+
+.authCheckboxLabel a:hover {
+  text-decoration: underline;
+}
+
 .authActions {
   display: flex;
   gap: 8px;

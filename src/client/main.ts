@@ -65,6 +65,7 @@ const messageInput = document.getElementById('messageInput') as HTMLInputElement
 const sendButton = document.getElementById('sendButton') as HTMLButtonElement;
 const emailInput = document.getElementById('emailInput') as HTMLInputElement;
 const passwordInput = document.getElementById('passwordInput') as HTMLInputElement;
+const passwordConfirmInput = document.getElementById('passwordConfirmInput') as HTMLInputElement;
 const signUpButton = document.getElementById('signUpButton') as HTMLButtonElement;
 const signInButton = document.getElementById('signInButton') as HTMLButtonElement;
 const signOutButton = document.getElementById('signOutButton') as HTMLButtonElement;
@@ -73,6 +74,7 @@ const authPage = document.getElementById('authPage') as HTMLElement;
 const terminalPage = document.getElementById('terminalPage') as HTMLElement;
 const headerUserEmail = document.getElementById('headerUserEmail') as HTMLSpanElement;
 const googleSignInButton = document.getElementById('googleSignInButton') as HTMLButtonElement;
+const termsConsentCheckbox = document.getElementById('termsConsentCheckbox') as HTMLInputElement;
 const profileBtn = document.getElementById('profileBtn') as HTMLButtonElement;
 
 // Status bar elements
@@ -241,17 +243,38 @@ updateClock();
 
 // ── Supabase auth ──
 
+function isPasswordSecure(password: string): { ok: boolean; message?: string } {
+  if (password.length < 8) return { ok: false, message: 'Password must be at least 8 characters.' };
+  if (!/[A-Z]/.test(password)) return { ok: false, message: 'Password must include at least one uppercase letter.' };
+  if (!/[a-z]/.test(password)) return { ok: false, message: 'Password must include at least one lowercase letter.' };
+  if (!/[0-9]/.test(password)) return { ok: false, message: 'Password must include at least one number.' };
+  if (!/[!@#$%^&*()_+\-=[\]{}|;:'",.<>?/\\`~]/.test(password)) return { ok: false, message: 'Password must include at least one special character.' };
+  return { ok: true };
+}
+
 async function handleSignUp(): Promise<void> {
   const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
+  const passwordConfirm = passwordConfirmInput?.value.trim() ?? '';
 
   if (!email || !password) {
     setAuthStatus('Email and password are required.', true);
     return;
   }
 
-  if (password.length < 6) {
-    setAuthStatus('Password must be at least 6 characters.', true);
+  if (password !== passwordConfirm) {
+    setAuthStatus('Passwords do not match.', true);
+    return;
+  }
+
+  const secure = isPasswordSecure(password);
+  if (!secure.ok) {
+    setAuthStatus(secure.message!, true);
+    return;
+  }
+
+  if (!termsConsentCheckbox?.checked) {
+    setAuthStatus('You must agree to the Terms of Service to sign up.', true);
     return;
   }
 
@@ -310,6 +333,10 @@ async function handleSignOut(): Promise<void> {
 async function handleGoogleSignIn(): Promise<void> {
   if (!supabaseConfigured) {
     setAuthStatus('Configuration error: authentication not configured.', true);
+    return;
+  }
+  if (!termsConsentCheckbox?.checked) {
+    setAuthStatus('You must agree to the Terms of Service to continue.', true);
     return;
   }
   setAuthStatus('REDIRECTING TO GOOGLE...');

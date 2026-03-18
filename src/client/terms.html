@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terms of Service — Portfolio Agent</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: #0a0a0a;
+        color: #c8c8c8;
+        font-family: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 32px 24px 48px;
+      }
+      h1 {
+        font-size: 18px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #ff6600;
+        margin-bottom: 8px;
+      }
+      .updated { color: #666; font-size: 12px; margin-bottom: 32px; }
+      h2 { font-size: 14px; color: #e0e0e0; margin-top: 28px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+      p { margin-bottom: 14px; }
+      ul { margin: 10px 0 14px 20px; }
+      li { margin-bottom: 6px; }
+      a { color: #ff6600; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .back { display: inline-block; margin-bottom: 24px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <a href="/app" class="back">← Back to app</a>
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: March 2026</p>
+
+    <p>Welcome to Portfolio Agent (“Service”). By creating an account or using the Service, you agree to these Terms of Service (“Terms”). If you do not agree, do not use the Service.</p>
+
+    <h2>1. Description of Service</h2>
+    <p>Portfolio Agent is an AI-powered portfolio analysis tool. It allows you to connect your brokerage account (via a third-party connection provider), ask questions about your portfolio in natural language, and receive analysis such as allocation breakdowns, performance metrics, and hypothetical “what-if” scenarios. The Service is read-only: it does not execute trades or move funds.</p>
+
+    <h2>2. Not Financial Advice</h2>
+    <p>The Service is for informational and educational use only. It does not provide investment, tax, or legal advice. All analysis, suggestions, and outputs are general in nature. You are responsible for your own investment decisions and should consult qualified professionals before acting on any information.</p>
+
+    <h2>3. Data and Privacy</h2>
+    <p>We take privacy and security seriously:</p>
+    <ul>
+      <li><strong>We do not store your brokerage login credentials.</strong> Connection to your brokerage is handled by a secure third-party provider (SnapTrade). We never see or store your brokerage username or password.</li>
+      <li><strong>Brokerage connection data</strong> (e.g. tokens used to access your account in read-only mode) is encrypted using industry-standard encryption (AES-256-GCM) with keys derived per user.</li>
+      <li><strong>We do not store your portfolio holdings, balances, or transaction history</strong> in our database. Holdings are fetched when you ask a question and cached only briefly in memory (e.g. 60 seconds) to improve performance.</li>
+      <li>Chat content may be sent to our AI provider (Anthropic) and, if enabled, to observability tools (e.g. Langfuse, LangSmith) in accordance with their policies.</li>
+    </ul>
+    <p>For more detail, see our <a href="/privacy.html">Privacy</a> documentation.</p>
+
+    <h2>4. Acceptable Use</h2>
+    <p>You agree to use the Service only for lawful purposes and in accordance with these Terms. You may not use the Service to violate any law, infringe others’ rights, or attempt to gain unauthorized access to any system or data. We may suspend or terminate access for abuse or violation of these Terms.</p>
+
+    <h2>5. Third-Party Services</h2>
+    <p>The Service relies on third parties, including but not limited to: authentication (Supabase), brokerage connectivity (SnapTrade), AI (Anthropic), and optional analytics. Your use of the Service is also subject to their terms and policies where applicable.</p>
+
+    <h2>6. Disclaimer of Warranties</h2>
+    <p>The Service is provided “as is” and “as available.” We disclaim all warranties, express or implied, including merchantability and fitness for a particular purpose. We do not guarantee accuracy, completeness, or uninterrupted availability of the Service.</p>
+
+    <h2>7. Limitation of Liability</h2>
+    <p>To the maximum extent permitted by law, we are not liable for any indirect, incidental, special, consequential, or punitive damages, or for any loss of profits, data, or use arising from your use of the Service. Our total liability is limited to the amount you paid us in the twelve months before the claim, or one hundred dollars, whichever is greater.</p>
+
+    <h2>8. Changes</h2>
+    <p>We may update these Terms from time to time. We will post the updated Terms and indicate the “Last updated” date. Continued use of the Service after changes constitutes acceptance of the revised Terms. For material changes, we may notify you via email or in-app notice where feasible.</p>
+
+    <h2>9. Contact</h2>
+    <p>For questions about these Terms or the Service, contact us through the contact information provided in the app or on the Service website.</p>
+
+    <p style="margin-top: 32px;"><a href="/app" class="back">← Back to app</a></p>
+  </body>
+</html>
