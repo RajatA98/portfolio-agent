@@ -161,6 +161,18 @@ This means:
 - **Dev mode** (no `SUPABASE_URL`): All requests pass with `userId='dev-user'`.
 - **Eval mode**: Requests with `token === EVAL_JWT` bypass Supabase.
 
+## Auth reliability (why it sometimes breaks)
+
+Auth can intermittently fail for a few reasons:
+
+1. **Token expiration** — Supabase access tokens expire (often ~1 hour). The client only retries with `refreshSession()` on 401 in the **chat** flow. Other calls (profile, chat list, SnapTrade) historically did not retry, so after expiry those requests could 401 and the UI could show “offline” or stale state until the user sent a message (which triggers refresh + retry).
+2. **No proactive refresh** — There is no background refresh before expiry. So the first request after the token has expired fails, then the client may refresh; if that refresh fails (network, Supabase blip), the user sees “Session expired.”
+3. **Supabase API latency or errors** — The server creates a new Supabase client per request and calls `getUser(token)`. Transient latency or errors from Supabase can cause occasional 401s.
+4. **CORS / origin mismatch** — In production, if `CORS_ORIGIN` does not exactly match the frontend origin (e.g. trailing slash, `http` vs `https`), the browser may omit the `Authorization` header or block the request, which looks like auth breaking.
+5. **OAuth redirect timing** — After Google sign-in redirect, the session is in the URL hash. If the app calls `getSession()` before the Supabase client has finished processing the hash, the session can be null briefly.
+
+**Mitigations:** Use a shared “fetch with retry on 401” helper for all authenticated API calls so profile, chat list, and SnapTrade also retry once with a refreshed token. Optionally add proactive session refresh (e.g. on visibility change or a timer before expiry). Ensure `CORS_ORIGIN` matches the deployed frontend origin exactly.
+
 ## Observability
 
 - **Langfuse**: Wraps each `agent-chat` call as a trace with userId, input/output, and metadata.

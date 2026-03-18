@@ -142,6 +142,28 @@ function authHeaders(): Record<string, string> {
   };
 }
 
+/** Fetch with auth; on 401, refresh session and retry once so expired tokens don't break the UI. */
+async function fetchWithAuth(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const token = getAccessToken();
+  const headers = new Headers(init?.headers ?? {});
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  let res = await fetch(input, { ...init, headers });
+  if (res.status === 401 && supabaseConfigured) {
+    const { data } = await supabase.auth.refreshSession();
+    if (data.session) {
+      currentSession = data.session;
+      headers.set('Authorization', `Bearer ${data.session.access_token}`);
+      res = await fetch(input, { ...init, headers });
+    }
+    if (res.status === 401) {
+      currentSession = null;
+      updateAuthUI();
+    }
+  }
+  return res;
+}
+
 function setAuthStatus(text: string, isError = false): void {
   authStatusEl.textContent = text;
   authStatusEl.className = 'authStatusMsg' + (isError ? ' error' : '');
@@ -409,9 +431,7 @@ async function checkBrokerageStatus(): Promise<void> {
   if (!token) return;
 
   try {
-    const res = await fetch(apiUrl('/api/snaptrade/connections'), {
-      headers: authHeaders()
-    });
+    const res = await fetchWithAuth(apiUrl('/api/snaptrade/connections'));
 
     if (!res.ok) {
       brokerageStatusIndicator.textContent = 'NO BROKERAGE';
@@ -463,10 +483,7 @@ async function openSnapTradeConnect(): Promise<void> {
 
   try {
     // Register user (idempotent)
-    const regRes = await fetch(apiUrl('/api/snaptrade/register'), {
-      method: 'POST',
-      headers: authHeaders()
-    });
+    const regRes = await fetchWithAuth(apiUrl('/api/snaptrade/register'), { method: 'POST' });
 
     if (!regRes.ok) {
       const errData = (await regRes.json().catch(() => ({ error: 'Registration failed' }))) as { error?: string };
@@ -477,9 +494,7 @@ async function openSnapTradeConnect(): Promise<void> {
     }
 
     // Get connect URL
-    const res = await fetch(apiUrl('/api/snaptrade/connect-url'), {
-      headers: authHeaders()
-    });
+    const res = await fetchWithAuth(apiUrl('/api/snaptrade/connect-url'));
 
     if (!res.ok) {
       const errData = (await res.json().catch(() => ({ error: 'Unknown error' }))) as { error?: string };
@@ -504,10 +519,7 @@ async function openSnapTradeConnect(): Promise<void> {
     const onConnected = async () => {
       brokerageStatus.textContent = 'VERIFYING...';
       try {
-        const verifyRes = await fetch(apiUrl('/api/snaptrade/verify-accounts'), {
-          method: 'POST',
-          headers: authHeaders()
-        });
+        const verifyRes = await fetchWithAuth(apiUrl('/api/snaptrade/verify-accounts'), { method: 'POST' });
         if (!verifyRes.ok) {
           const data = (await verifyRes.json().catch(() => ({}))) as { error?: string; message?: string };
           if (data.error === 'duplicate_account') {
@@ -559,9 +571,7 @@ async function loadDashboard(): Promise<void> {
   if (!token) return;
 
   try {
-    const res = await fetch(apiUrl('/api/snaptrade/holdings'), {
-      headers: authHeaders()
-    });
+    const res = await fetchWithAuth(apiUrl('/api/snaptrade/holdings'));
     if (!res.ok) return;
 
     const data = (await res.json()) as {
@@ -1230,13 +1240,9 @@ async function showUpgradePrompt(): Promise<void> {
   bar.innerHTML = `<span>TOKEN LIMIT REACHED</span><button id="upgradeBtn" class="upgradeBtn">UPGRADE TO PRO</button>`;
   messagesEl.parentElement?.insertBefore(bar, messagesEl.nextSibling);
   bar.querySelector('#upgradeBtn')?.addEventListener('click', async () => {
-    const token = getAccessToken();
-    if (!token) return;
+    if (!getAccessToken()) return;
     try {
-      const res = await fetch(apiUrl('/api/stripe/create-checkout-session'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-      });
+      const res = await fetchWithAuth(apiUrl('/api/stripe/create-checkout-session'), { method: 'POST' });
       const data = (await res.json()) as { url?: string; error?: string };
       if (data.url) {
         window.open(data.url, '_blank');
@@ -1261,7 +1267,7 @@ async function loadProfileData(): Promise<{ email: string; subscription: string;
 
   if (token) {
     try {
-      const profileRes = await fetch(apiUrl('/api/profile'), { headers: { Authorization: `Bearer ${token}` } });
+      const profileRes = await fetchWithAuth(apiUrl('/api/profile'));
       if (profileRes.ok) {
         const data = (await profileRes.json()) as { subscriptionStatus?: string; tokensUsed?: number; tokenLimit?: number };
         if (data.subscriptionStatus === 'active') subscription = 'Pro';
@@ -1270,7 +1276,7 @@ async function loadProfileData(): Promise<{ email: string; subscription: string;
     } catch { /* ignore */ }
 
     try {
-      const connRes = await fetch(apiUrl('/api/snaptrade/connections'), { headers: { Authorization: `Bearer ${token}` } });
+      const connRes = await fetchWithAuth(apiUrl('/api/snaptrade/connections'));
       if (connRes.ok) {
         const data = (await connRes.json()) as { connections?: Array<{ brokerageName: string }> };
         connections = data.connections ?? [];
@@ -1319,13 +1325,9 @@ function toggleProfilePanel(): void {
 
     panel.querySelector('#profileCloseBtn')?.addEventListener('click', () => panel.remove());
     panel.querySelector('#profileUpgradeBtn')?.addEventListener('click', async () => {
-      const token = getAccessToken();
-      if (!token) return;
+      if (!getAccessToken()) return;
       try {
-        const res = await fetch(apiUrl('/api/stripe/create-checkout-session'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-        });
+        const res = await fetchWithAuth(apiUrl('/api/stripe/create-checkout-session'), { method: 'POST' });
         const data = (await res.json()) as { url?: string };
         if (data.url) window.open(data.url, '_blank');
       } catch { /* ignore */ }
