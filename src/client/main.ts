@@ -35,6 +35,7 @@ type AgentResponse = {
 type AgentStreamEvent =
   | { type: 'iteration_start'; iteration: number }
   | { type: 'thinking'; iteration: number }
+  | { type: 'thought'; text: string; iteration: number }
   | { type: 'tool_start'; tool: string; iteration: number }
   | {
       type: 'tool_end';
@@ -1067,6 +1068,18 @@ async function sendMessageStreaming(
           appendAgentConsoleLine(
             agentConsole,
             `ITER ${formatIteration(event.iteration)} | LLM STEP READY`,
+            'cl-thinking'
+          );
+          break;
+        }
+        case 'thought': {
+          // ReAct: display the agent's reasoning (Thought step)
+          const truncated = event.text.length > 200
+            ? event.text.slice(0, 200) + '...'
+            : event.text;
+          appendAgentConsoleLine(
+            agentConsole,
+            `ITER ${formatIteration(event.iteration)} | THOUGHT: ${truncated}`,
             'cl-thinking'
           );
           break;

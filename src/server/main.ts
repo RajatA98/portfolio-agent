@@ -264,7 +264,14 @@ app.post('/api/stripe/create-checkout-session', async (req, res) => {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  const baseUrl = agentConfig.corsOrigin || 'http://localhost:5179';
+  // Use request Origin for redirect so Stripe sends user back to the app they're on (avoids localhost in prod)
+  const origin = req.get('Origin')?.replace(/\/$/, '') || '';
+  const allowedOrigin =
+    origin &&
+    (origin === agentConfig.corsOrigin ||
+      (origin.startsWith('https://') && origin.includes('.run.app')) ||
+      /^http:\/\/localhost(:\d+)?$/i.test(origin));
+  const baseUrl = (allowedOrigin ? origin : null) || agentConfig.corsOrigin || 'http://localhost:5179';
   try {
     const stripe = new Stripe(agentConfig.stripeSecretKey);
     const sessionParams: Stripe.Checkout.SessionCreateParams = {

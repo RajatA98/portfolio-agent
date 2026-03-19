@@ -116,6 +116,7 @@ export interface AgentLoopMeta {
   iterations: number;
   totalMs: number;
   tokenUsage: TokenUsage;
+  thoughts: string[];
   terminationReason:
     | 'end_turn'
     | 'max_iterations'

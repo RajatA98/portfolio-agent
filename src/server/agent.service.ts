@@ -32,6 +32,7 @@ export type StreamCallback = (event: StreamEvent) => void;
 export type StreamEvent =
   | { type: 'iteration_start'; iteration: number }
   | { type: 'thinking'; iteration: number }
+  | { type: 'thought'; text: string; iteration: number }
   | { type: 'tool_start'; tool: string; iteration: number }
   | { type: 'tool_end'; tool: string; ok: boolean; ms: number; iteration: number; detail?: string }
   | { type: 'done'; answer: string; confidence: number; warnings: string[]; toolTrace: ToolTraceRow[]; loopMeta?: AgentLoopMeta }
@@ -190,6 +191,7 @@ export class AgentService {
       const circuitBreakerMap = new Map<string, number>();
       let syntheticInjectedThisRequest = false;
       let lastResponseContent: Anthropic.ContentBlock[] | null = null;
+      const thoughts: string[] = [];
 
       // ─── ReAct loop: Thought → Action → Observation ───────────────
       while (iteration < agentConfig.maxIterations) {
@@ -224,9 +226,19 @@ export class AgentService {
         // Save content for post-loop text extraction
         lastResponseContent = response.content;
 
-        onStream?.({ type: 'thinking', iteration });
+        // ─── ReAct: Extract Thought (text blocks before tool calls) ──
+        const thoughtText = response.content
+          .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+          .map((block) => block.text)
+          .join('\n')
+          .trim();
 
-        // ─── Extract LLM tool calls (if any) ─────────────────────────
+        if (thoughtText) {
+          thoughts.push(thoughtText);
+          onStream?.({ type: 'thought', text: thoughtText, iteration });
+        }
+
+        // ─── Extract LLM tool calls (Action step) ────────────────────
         const toolUseBlocks = response.content.filter(
           (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
         );
@@ -442,6 +454,7 @@ export class AgentService {
             outputTokens: totalOutputTokens,
             totalTokens: totalInputTokens + totalOutputTokens
           },
+          thoughts,
           terminationReason
         }
       };
