@@ -1,31 +1,33 @@
-# Cloud Build: build Docker image and push to Artifact Registry.
-# The client needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY at build time —
-# set them in the Cloud Build trigger as substitution variables:
-#   _VITE_SUPABASE_URL, _VITE_SUPABASE_ANON_KEY
-# Or pass when invoking manually:
-#   gcloud builds submit --config=cloudbuild.yaml \
-#     --substitutions=_VITE_SUPABASE_URL=https://xxx.supabase.co,_VITE_SUPABASE_ANON_KEY=eyJ...
-#
-# After the image is built, deploy to Cloud Run:
-#   gcloud run deploy portfolio-agent --image REGION-docker.pkg.dev/PROJECT_ID/REPO/agent:latest ...
-# Or use the deploy-cloudrun.yaml config (set PROJECT_ID and REGION).
+# Cloud Build: build, push, and deploy to Cloud Run.
+# Trigger substitution variables supply VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+# so Vite can inline them into the client bundle at build time.
 
 substitutions:
   _REGION: us-central1
   _REPO: portfolio-agent
   _IMAGE: agent
+  _SERVICE_NAME: portfolio-agent-git
   _VITE_SUPABASE_URL: ''
   _VITE_SUPABASE_ANON_KEY: ''
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  substitutionOption: ALLOW_LOOSE
 
 steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    id: pull-cache
+    entrypoint: /bin/bash
+    args:
+      - -c
+      - 'docker pull ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:latest || exit 0'
+
   - name: 'gcr.io/cloud-builders/docker'
     id: build
     args:
       - 'build'
-      - '--no-cache'
+      - '--cache-from'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:latest'
       - '--build-arg'
       - 'VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}'
       - '--build-arg'
@@ -33,11 +35,10 @@ steps:
       - '--build-arg'
       - 'CACHE_BUST=${BUILD_ID}'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${BUILD_ID}'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${COMMIT_SHA}'
       - '-t'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:latest'
       - '.'
-    dir: '.'
 
   - name: 'gcr.io/cloud-builders/docker'
     id: push
@@ -47,6 +48,19 @@ steps:
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}'
     waitFor: ['build']
 
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - '${_SERVICE_NAME}'
+      - '--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${COMMIT_SHA}'
+      - '--region=${_REGION}'
+      - '--quiet'
+    waitFor: ['push']
+
 images:
-  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${BUILD_ID}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:${COMMIT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_IMAGE}:latest'
