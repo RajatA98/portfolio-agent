@@ -33,7 +33,7 @@ fi
 
 IMAGE="${IMAGE:-us-central1-docker.pkg.dev/${PROJECT_ID}/portfolio-agent/agent:latest}"
 REGION="${REGION:-us-central1}"
-SERVICE_NAME="${SERVICE_NAME:-portfolio-agent}"
+SERVICE_NAME="${SERVICE_NAME:-portfolio-agent-git}"
 
 # Required for Cloud Run — must be set in .env
 REQUIRED_VARS=(ANTHROPIC_API_KEY SUPABASE_URL SUPABASE_ANON_KEY DATABASE_URL DIRECT_URL ENCRYPTION_KEY ENCRYPTION_SALT)
