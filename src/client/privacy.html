@@ -38,8 +38,11 @@
     <h2>What we don’t store</h2>
     <p>Portfolio holdings and prices are fetched when you ask questions and cached only briefly in memory (e.g. 60 seconds). We never see or store your brokerage username or password.</p>
 
+    <h2>Data anonymization</h2>
+    <p>When you ask the AI a question, your portfolio data is fetched from SnapTrade and processed on our server. Before any data is sent to the AI (Anthropic Claude), we <strong>strip all dollar amounts, share counts, cost basis figures, and account balances</strong>. The AI only receives allocation percentages, ticker symbols, and asset classes. This means Anthropic never sees your actual financial figures — only the relative shape of your portfolio.</p>
+
     <h2>Third parties</h2>
-    <p><strong>Anthropic (Claude):</strong> Your chat messages are sent to Anthropic’s API to generate AI responses. Per Anthropic’s data policy, API inputs and outputs are <strong>not used to train their models</strong>. Anthropic may retain API data for up to 30 days for trust and safety purposes (abuse detection), after which it is automatically deleted. See <a href="https://www.anthropic.com/policies/privacy" target="_blank" rel="noopener">Anthropic’s Privacy Policy</a>.</p>
+    <p><strong>Anthropic (Claude):</strong> Your chat messages and anonymized portfolio data (percentages and symbols only — no dollar values) are sent to Anthropic’s API to generate AI responses. Per Anthropic’s data policy, API inputs and outputs are <strong>not used to train their models</strong>. Anthropic may retain API data for up to 30 days for trust and safety purposes (abuse detection), after which it is automatically deleted. See <a href="https://www.anthropic.com/policies/privacy" target="_blank" rel="noopener">Anthropic’s Privacy Policy</a>.</p>
     <p><strong>SnapTrade:</strong> Brokerage data is sent to SnapTrade to retrieve your holdings in read-only mode.</p>
     <p><strong>Observability (optional):</strong> If enabled, chat content may be sent to tools such as Langfuse or LangSmith for performance monitoring.</p>
     <p>See our <a href="/terms.html">Terms of Service</a> for more.</p>

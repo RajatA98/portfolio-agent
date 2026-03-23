@@ -26,6 +26,7 @@ import { SnapTradeConnectTool } from './tools/snaptrade-connect.tool';
 import { PortfolioReadTool } from './tools/portfolio-read.tool';
 import { SimulateAllocationChangeTool } from './tools/simulate-allocation-change.tool';
 import { ToolContext, ToolRegistry } from './tools/tool-registry';
+import { sanitizeToolResultForLLM } from './lib/sanitize-for-llm';
 
 export type StreamCallback = (event: StreamEvent) => void;
 
@@ -334,10 +335,13 @@ export class AgentService {
               ms: elapsedMs
             });
             onStream?.({ type: 'tool_end', tool: toolUse.name, ok: true, ms: elapsedMs, iteration });
+            // Send sanitized result to Claude (no dollar amounts or share counts)
+            // but keep raw result in toolResults map for verifier + UI
+            const sanitized = sanitizeToolResultForLLM(toolUse.name, result);
             toolResultBlocks.push({
               type: 'tool_result',
               tool_use_id: toolUse.id,
-              content: JSON.stringify(result)
+              content: JSON.stringify(sanitized)
             });
           } catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
