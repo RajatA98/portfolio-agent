@@ -6,7 +6,7 @@ substitutions:
   _REGION: us-central1
   _REPO: portfolio-agent
   _IMAGE: agent
-  _SERVICE_NAME: portfolio-agent-git
+  _SERVICE_NAME: portfolio-agent
   _VITE_SUPABASE_URL: ''
   _VITE_SUPABASE_ANON_KEY: ''
 

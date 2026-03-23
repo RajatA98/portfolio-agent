@@ -52,7 +52,9 @@
       <li><strong>We do not store your brokerage login credentials.</strong> Connection to your brokerage is handled by a secure third-party provider (SnapTrade). We never see or store your brokerage username or password.</li>
       <li><strong>Brokerage connection data</strong> (e.g. tokens used to access your account in read-only mode) is encrypted using industry-standard encryption (AES-256-GCM) with keys derived per user.</li>
       <li><strong>We do not store your portfolio holdings, balances, or transaction history</strong> in our database. Holdings are fetched when you ask a question and cached only briefly in memory (e.g. 60 seconds) to improve performance.</li>
-      <li>Chat content may be sent to our AI provider (Anthropic) and, if enabled, to observability tools (e.g. Langfuse, LangSmith) in accordance with their policies.</li>
+      <li><strong>Chat messages are encrypted at rest.</strong> When you are signed in, your chat history is stored server-side with AES-256-GCM encryption using a unique key derived from your user ID. Each message is encrypted individually. No one—including our team—can read your stored conversations without access to both the database and the server-side encryption keys.</li>
+      <li><strong>Chat content is sent to Anthropic (Claude) for AI responses.</strong> Anthropic's API data policy states that API inputs and outputs are <strong>not used to train their models</strong>. Anthropic may retain API inputs and outputs for up to 30 days for trust and safety purposes (e.g. to detect abuse), after which they are automatically deleted. For full details, see <a href="https://www.anthropic.com/policies/privacy" target="_blank" rel="noopener">Anthropic's Privacy Policy</a> and <a href="https://www.anthropic.com/policies/usage" target="_blank" rel="noopener">Usage Policy</a>.</li>
+      <li>If enabled, chat content may also be sent to observability tools (e.g. Langfuse, LangSmith) for performance monitoring, in accordance with their respective policies.</li>
     </ul>
     <p>For more detail, see our <a href="/privacy.html">Privacy</a> documentation.</p>
 
